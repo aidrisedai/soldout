@@ -15,6 +15,7 @@ export async function GET() {
         db.contact.count({ where: { eventId: e.id, referredBy: { not: null } } }),
         db.mediaItem.count({ where: { eventId: e.id, status: "approved" } }),
       ]);
+      const connectorReplies = await db.touch.count({ where: { direction: "in", prospectId: { in: (await db.prospect.findMany({ where: { eventId: e.id }, select: { id: true } })).map((p) => p.id) } } });
       const [optIns, answered, linksSent, paid, flagsTotal, steppedIn, flags, ready, strategy] = await Promise.all([
         count("opted_in"),
         count("answered"),
@@ -36,7 +37,7 @@ export async function GET() {
         deadline: e.deadline,
         price: e.price,
         score: { optIns, answered, linksSent, paid, flagsTotal, steppedIn },
-        pipeline: { targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount },
+        pipeline: { targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount, connectorReplies },
         dateText: e.dateText,
         autopilot: e.autopilot,
         openFlags: flags,

@@ -220,12 +220,14 @@ async function runTool(c: Ctx, name: string, input: Record<string, string>): Pro
       const answers = await db.fitAnswer.findMany({ where: { contactId: contact.id } });
       const missing = c.fit.filter((f) => !answers.some((a) => a.key === f.key));
       if (missing.length) return `Not yet: ask these fit questions first: ${missing.map((m) => m.key).join(", ")}`;
-      const link = event.applyLink || event.paymentLink;
+      // A Stripe payment link carries the parent's id so the webhook can mark them paid.
+      const pay = event.paymentLink ? `${event.paymentLink}${event.paymentLink.includes("?") ? "&" : "?"}client_reference_id=${contact.id}` : null;
+      const link = pay ?? event.applyLink;
       if (!link) {
         await flag(c, "Parent is ready to enroll", "Event has no enrollment link configured");
         return "No link configured; organizer flagged. Tell the parent the organizer will send the link.";
       }
-      c.attachments.push(`Apply and enroll here: ${link}`);
+      c.attachments.push(pay ? `Enroll and pay here: ${pay}${event.applyLink ? `\n(Application: ${event.applyLink})` : ""}` : `Apply and enroll here: ${link}`);
       await db.contact.update({ where: { id: contact.id }, data: { stage: "link_sent" } });
       await db.outcome.create({ data: { eventId: event.id, contactId: contact.id, type: "link_sent", detail: `${input.teens} → ${link}` } });
       c.actions.push("link_sent");

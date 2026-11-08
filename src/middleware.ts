@@ -16,5 +16,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/intake/:path*", "/simulate/:path*", "/api/((?!whatsapp/webhook|health).*)"],
+  matcher: ["/dashboard/:path*", "/intake/:path*", "/simulate/:path*", "/api/((?!whatsapp/webhook|stripe/webhook|health).*)"],
 };

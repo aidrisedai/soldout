@@ -7,6 +7,7 @@ import MediaPanel from "./MediaPanel";
 import TargetsPanel from "./TargetsPanel";
 import PeoplePanel from "./PeoplePanel";
 import ActivityPanel from "./ActivityPanel";
+import ParentsPanel from "./ParentsPanel";
 import Working from "@/components/Working";
 
 type Strategy = {
@@ -31,7 +32,7 @@ type EventRow = {
   dateText: string | null;
   autopilot: boolean;
   score: { optIns: number; answered: number; linksSent: number; paid: number; flagsTotal: number; steppedIn: number };
-  pipeline: { targetsTotal: number; targetsGo: number; targetsPending: number; prospects: number; contacted: number; referredParents: number; mediaCount: number };
+  pipeline: { targetsTotal: number; targetsGo: number; targetsPending: number; prospects: number; contacted: number; referredParents: number; mediaCount: number; connectorReplies: number };
   openFlags: { id: string; question: string; reason: string; createdAt: string; contact: { phone: string; channel: string } }[];
   awaitingPayment: { id: string; phone: string; channel: string; program: string | null }[];
   strategy: Strategy | null;
@@ -78,6 +79,26 @@ function rightNow(e: EventRow): { title: string; steps: string[] } | null {
   if (e.pipeline.targetsGo && e.pipeline.prospects === 0) return { title: "Finding connectors", steps: ["Searching LinkedIn inside each GO community…", "Looking up public work emails…", "Writing a personal opener for each person…"] };
   if (e.pipeline.prospects > e.pipeline.contacted) return { title: "Reaching out", steps: ["Emailing openers to connectors (up to 10 a day)…", "Preparing LinkedIn notes and warm intros…", "Watching for replies…"] };
   return null;
+}
+
+type StepState = "done" | "live" | "attention" | "waiting";
+
+// The same A–J journey as the landing page demo, computed from the live campaign.
+function journey(e: EventRow): { letter: string; label: string; state: StepState; tab: Tab; hint: string }[] {
+  const p = e.pipeline, s = e.score, st = e.strategy;
+  const on = e.autopilot;
+  return [
+    { letter: "A", label: "Goal", state: "done", tab: "strategy", hint: `${e.goalSeats ?? "?"} seats${e.deadline ? ` by ${e.deadline}` : ""}` },
+    { letter: "B", label: "Diagnosis", state: st ? "done" : "live", tab: "strategy", hint: st ? "What’s in the way" : "Drafting…" },
+    { letter: "C", label: "Policy + test", state: st?.status === "approved" ? "done" : st ? (on ? "live" : "attention") : "waiting", tab: "strategy", hint: st?.status === "approved" ? `${st.body.policies.length} policies` : "Approving…" },
+    { letter: "D", label: "Communities", state: p.targetsTotal && !p.targetsPending ? "done" : st?.status === "approved" ? "live" : "waiting", tab: "communities", hint: p.targetsTotal ? `${p.targetsGo} GO of ${p.targetsTotal}` : "—" },
+    { letter: "E", label: "People", state: p.prospects ? "done" : p.targetsGo ? "live" : "waiting", tab: "people", hint: p.prospects ? `${p.prospects} found` : "—" },
+    { letter: "F", label: "Opener", state: p.contacted ? "done" : p.prospects ? "live" : "waiting", tab: "people", hint: p.contacted ? `${p.contacted} reached` : "—" },
+    { letter: "G", label: "Conversation", state: p.connectorReplies ? "done" : p.contacted ? "live" : "waiting", tab: "people", hint: p.connectorReplies ? `${p.connectorReplies} replies` : "—" },
+    { letter: "H", label: "Parents", state: s.optIns ? "done" : p.contacted ? "live" : "waiting", tab: "parents", hint: s.optIns ? `${s.optIns} opted in` : "—" },
+    { letter: "I", label: "Organizer", state: e.openFlags.length ? "attention" : s.steppedIn ? "done" : "waiting", tab: "parents", hint: e.openFlags.length ? `${e.openFlags.length} need you` : s.steppedIn ? `${s.steppedIn} answered` : "Only if needed" },
+    { letter: "J", label: "Paid", state: s.paid ? "done" : s.linksSent ? "live" : "waiting", tab: "parents", hint: `${s.paid}/${e.goalSeats ?? "—"} seats` },
+  ];
 }
 
 function daysLeft(deadline: string | null) {
@@ -201,7 +222,25 @@ export default function Dashboard() {
                 </button>
               </section>
 
-              <nav className="mt-6 flex gap-1 overflow-x-auto rounded-xl bg-paper p-1 shadow-sm">
+              <section className="mt-6 overflow-x-auto rounded-2xl bg-paper p-4 shadow-sm">
+                <div className="flex min-w-[860px] items-start">
+                  {journey(e).map((j, k, arr) => (
+                    <button key={j.letter} onClick={() => setTab(j.tab)} className="group relative flex flex-1 flex-col items-center text-center">
+                      {k < arr.length - 1 && <span className={`absolute left-1/2 top-4 h-0.5 w-full ${j.state === "done" ? "bg-forest" : "bg-line"}`} />}
+                      <span className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition group-hover:scale-110 ${
+                        j.state === "done" ? "bg-forest text-white" : j.state === "live" ? "bg-clay text-white" : j.state === "attention" ? "bg-mustard text-night" : "border-2 border-line bg-paper text-muted"
+                      }`}>
+                        {j.state === "live" && <span className="absolute inset-0 animate-ping rounded-full bg-clay/40" />}
+                        {j.state === "done" ? "✓" : j.letter}
+                      </span>
+                      <span className={`mt-2 text-xs font-semibold ${j.state === "waiting" ? "text-muted" : "text-ink"}`}>{j.label}</span>
+                      <span className="text-[10px] text-muted">{j.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl bg-paper p-1 shadow-sm">
                 {TABS.map((t) => (
                   <button key={t.key} onClick={() => setTab(t.key)} className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab === t.key ? "bg-ink text-cream" : "text-ink/70 hover:bg-cream"}`}>
                     <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${tab === t.key ? "bg-mustard text-night" : "bg-sand"}`}>{t.n}</span>
@@ -290,37 +329,34 @@ export default function Dashboard() {
                 )}
 
                 {tab === "parents" && (
-                  <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-8">
+                    {e.openFlags.length > 0 && (
+                      <div>
+                        <h2 className="font-display text-xl">Needs you <span className="text-muted">({e.openFlags.length})</span></h2>
+                        <p className="mb-3 text-xs text-muted">The only things SoldOut won’t answer itself: refunds, installments, anything not in your content.</p>
+                        <ul className="grid gap-3 md:grid-cols-2">
+                          {e.openFlags.map((f) => (
+                            <li key={f.id} className="rounded-xl border border-clay/30 bg-clay/5 p-4 text-sm">
+                              <p className="font-semibold">“{f.question}”</p>
+                              <p className="mt-1 text-xs text-clay-dark">{f.reason}</p>
+                              <div className="mt-3 flex gap-2">
+                                <input className="flex-1 rounded-lg border px-3 py-2" placeholder="Your answer. It goes straight to them." value={replies[f.id] ?? ""} onChange={(x) => setReplies({ ...replies, [f.id]: x.target.value })} />
+                                <button disabled={busy === f.id || !replies[f.id]?.trim()} onClick={() => act(f.id, `/api/flags/${f.id}/reply`, { reply: replies[f.id] })} className="rounded-lg bg-clay px-4 font-semibold text-white disabled:opacity-50">Reply</button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div>
-                      <h2 className="font-display text-xl">Needs you <span className="text-muted">({e.openFlags.length})</span></h2>
-                      <p className="mb-3 text-xs text-muted">Questions SoldOut won’t answer itself: refunds, installments, anything not in your content.</p>
-                      {!e.openFlags.length && <p className="rounded-xl bg-sand/50 p-4 text-sm text-muted">Nothing waiting.</p>}
-                      <ul className="space-y-3">
-                        {e.openFlags.map((f) => (
-                          <li key={f.id} className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm">
-                            <p className="font-semibold">“{f.question}”</p>
-                            <p className="mt-1 text-xs text-rose-700">{f.reason} · {f.contact.channel} {f.contact.phone.replace(/^(wa|email):/, "")}</p>
-                            <div className="mt-3 flex gap-2">
-                              <input className="flex-1 rounded-lg border bg-paper px-3 py-2" placeholder="Your answer. It goes straight to them." value={replies[f.id] ?? ""} onChange={(x) => setReplies({ ...replies, [f.id]: x.target.value })} />
-                              <button disabled={busy === f.id || !replies[f.id]?.trim()} onClick={() => act(f.id, `/api/flags/${f.id}/reply`, { reply: replies[f.id] })} className="rounded-lg bg-rose-600 px-4 font-semibold text-white disabled:opacity-50">Reply</button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h2 className="font-display text-xl">Enrollment link sent <span className="text-muted">({e.awaitingPayment.length})</span></h2>
-                      <p className="mb-3 text-xs text-muted">Families who were a fit and got the link. Mark them paid when they enroll.</p>
-                      {!e.awaitingPayment.length && <p className="rounded-xl bg-sand/50 p-4 text-sm text-muted">No one yet. Parents text <b>JOIN {e.keyword}</b> to start.</p>}
-                      <ul className="space-y-2">
-                        {e.awaitingPayment.map((c) => (
-                          <li key={c.id} className="flex items-center justify-between rounded-xl border p-3 text-sm">
-                            <span>{c.phone.replace(/^wa:/, "")} <span className="text-muted">· {c.channel} · {c.program ?? "program n/a"}</span></span>
-                            <button disabled={busy === c.id} onClick={() => act(c.id, `/api/contacts/${c.id}/paid`)} className="rounded-lg bg-forest px-3 py-1 text-xs font-semibold text-white">Mark paid</button>
-                          </li>
-                        ))}
-                      </ul>
-                      {e.pipeline.referredParents > 0 && <p className="mt-4 text-sm text-forest">{e.pipeline.referredParents} parent{e.pipeline.referredParents > 1 ? "s" : ""} came in through a connector’s code.</p>}
+                      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                          <h2 className="font-display text-xl">Parent conversations</h2>
+                          <p className="text-xs text-muted">Every family who texted JOIN, live. Paid updates on its own from Stripe (test mode); Mark paid is there as a backup.</p>
+                        </div>
+                        <p className="text-xs text-muted">{s.optIns} opted in · {s.linksSent} links sent · {s.paid} paid{e.pipeline.referredParents ? ` · ${e.pipeline.referredParents} via connectors` : ""}</p>
+                      </div>
+                      <ParentsPanel eventId={e.id} onPaid={(id) => act(id, `/api/contacts/${id}/paid`)} />
                     </div>
                   </div>
                 )}
