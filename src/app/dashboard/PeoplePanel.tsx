@@ -96,7 +96,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 {list.map((p) => {
                   const isOpen = open === p.id;
-                  const ladder = p.channels.email ? "Email (sent automatically)" : p.channels.linkedin ? "LinkedIn note (you send)" : "Warm intro (through your network)";
+                  const ladder = (p.channels as { whatsapp?: string }).whatsapp ? "WhatsApp (your contact, agreed to hear from you)" : p.channels.email ? "Email (sent automatically)" : p.channels.linkedin ? "LinkedIn note (you send)" : "Warm intro (through your network)";
                   return (
                     <div key={p.id} className="rounded-lg border bg-paper p-3 text-sm">
                       <div className="flex items-start justify-between gap-2">
@@ -108,12 +108,14 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                       </div>
                       <p className="mt-1 text-xs text-ink/70">{p.whyThem}</p>
                       <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted">
+                        {(p.channels as { whatsapp?: string }).whatsapp && <span>💬 {(p.channels as { whatsapp?: string }).whatsapp}</span>}
                         {p.channels.email && <span>✉ {p.channels.email}</span>}
                         {p.channels.linkedin && <a className="underline" href={p.channels.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>}
                         {p.joinCode && <span>code <b>JOIN {p.joinCode}</b>{p.broughtIn ? ` · brought ${p.broughtIn}` : ""}</span>}
                       </div>
 
-                      {p.status === "found" && (
+                      {p.status === "found" && !p.opener && <p className="mt-2 text-xs text-muted">Writing a personal opener…</p>}
+                      {p.status === "found" && p.opener && (
                         <div className="mt-2">
                           <textarea className="w-full rounded border p-2 text-xs" rows={4} value={drafts[p.id] ?? p.opener ?? ""} onChange={(e) => setDrafts({ ...drafts, [p.id]: e.target.value })} />
                           <div className="mt-1 flex items-center justify-between">
@@ -127,7 +129,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                                 }}
                                 className="rounded bg-forest px-2 py-0.5 text-xs font-semibold text-white"
                               >
-                                {p.channels.email ? "Approve & send" : "Approve"}
+                                {p.channels.email || (p.channels as { whatsapp?: string }).whatsapp ? "Approve & send" : "Approve"}
                               </button>
                             </div>
                           </div>

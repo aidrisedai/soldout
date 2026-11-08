@@ -4,6 +4,7 @@ import { draftFitQuestions, parseClipLines, parseFitLines, uniqueKeyword } from 
 import { draftStrategy } from "@/lib/strategy";
 import { askDot } from "@/lib/dot";
 import { advance } from "@/lib/autopilot";
+import { parseContacts, saveOrganizerContacts } from "@/lib/contacts";
 
 export const maxDuration = 120;
 
@@ -60,6 +61,8 @@ export async function POST(req: Request) {
       accounts: JSON.stringify({ linkedin: s("acctLinkedin") || undefined, instagram: s("acctInstagram") || undefined, email: s("acctEmail") || undefined }),
     },
   });
+  // The organizer's own (consented) contacts: reached directly once the campaign starts.
+  if (s("peopleConsent") === "yes" && s("people")) await saveOrganizerContacts(event.id, event.keyword, parseContacts(s("people")));
   // Organizer's network for warm intros: "Name | how you know them | community | contact" per line.
   for (const line of s("network").split("\n").map((l) => l.trim()).filter(Boolean)) {
     const [name, relationship, community, contact] = line.split("|").map((x) => x?.trim() || undefined);

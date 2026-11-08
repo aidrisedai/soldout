@@ -51,6 +51,7 @@ export default function Onboarding() {
   const [gaps, setGaps] = useState<{ key: string; question: string }[]>([]);
   const [gapIdx, setGapIdx] = useState(0);
   const [read, setRead] = useState<{ name: string; ok: boolean }[]>([]);
+  const [consent, setConsent] = useState(false);
   const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
   async function advance(answers: Record<string, string>, lastKey?: string) {
@@ -111,6 +112,14 @@ export default function Onboarding() {
     else { setGaps([]); await advance(answers, undefined); }
   }
 
+  async function savePeople(skip: boolean) {
+    if (!step) return;
+    setHistory((h) => [...h, { answers: step.answers, step }]);
+    const answers = skip ? { ...step.answers, people__skipped: "1" } : { ...step.answers, people: value.trim(), peopleConsent: consent ? "yes" : "no" };
+    setValue("");
+    await advance(answers, undefined);
+  }
+
   async function chooseMode(mode: "approve" | "auto") {
     if (!step) return;
     setHistory((h) => [...h, { answers: step.answers, step }]);
@@ -137,7 +146,7 @@ export default function Onboarding() {
     setCreating(true);
     const a = step.answers;
     const fd = new FormData();
-    for (const k of ["organizerName", "organization", "name", "goalSeats", "deadline", "price", "audience", "applyLink", "dateText", "place", "mode"]) if (a[k]) fd.append(k, a[k]);
+    for (const k of ["organizerName", "organization", "name", "goalSeats", "deadline", "price", "audience", "applyLink", "dateText", "place", "mode", "people", "peopleConsent"]) if (a[k]) fd.append(k, a[k]);
     fd.append("content", a.intent && a.content && !a.content.includes(a.intent) ? `${a.content}\n\nOrganizer's note: ${a.intent}` : a.content ?? a.intent ?? "");
     const r = await fetch("/api/events", { method: "POST", body: fd });
     const j = await r.json();
@@ -177,6 +186,9 @@ export default function Onboarding() {
                 step.answers[k] ? (
                   <div key={k} className="flex justify-between gap-4 px-5 py-3 text-sm"><dt className="text-muted">{l}</dt><dd className="text-right font-semibold">{step.answers[k]}</dd></div>
                 ) : null,
+              )}
+              {step.answers.people && step.answers.peopleConsent === "yes" && (
+                <div className="flex justify-between gap-4 px-5 py-3 text-sm"><dt className="text-muted">Your contacts</dt><dd className="font-semibold">{step.answers.people.split(/\n/).filter((l) => l.trim() && !/^name\s*[|,]/i.test(l.trim())).length} people, reached directly</dd></div>
               )}
               <div className="flex justify-between gap-4 px-5 py-3 text-sm"><dt className="text-muted">Runs</dt><dd className="font-semibold">{step.answers.mode === "auto" ? "Fully autonomous" : "You approve each step"}</dd></div>
             </dl>
@@ -266,6 +278,33 @@ export default function Onboarding() {
             <div className="mt-8 flex items-center justify-between">
               <button type="button" onClick={back} disabled={!history.length} className="text-sm text-muted underline disabled:opacity-0">← Back</button>
               <button type="button" onClick={buildBrief} disabled={!files.length && !links.trim() && !value.trim()} className="rounded-full bg-clay px-7 py-3.5 font-bold text-white hover:bg-clay-dark disabled:opacity-40">Build my brief →</button>
+            </div>
+          </div>
+        ) : f?.key === "people" ? (
+          <div key="people" className="animate-[fadeonly_.35s_ease]">
+            {step.ack && <p className="font-display text-lg italic text-clay">{step.ack}</p>}
+            <h1 className="font-display mt-3 text-[2rem] leading-tight sm:text-4xl">Anyone you already know that SoldOut should reach out to?</h1>
+            <p className="mt-3 text-muted">Parents, community leaders, past families. Add whatever you know: SoldOut writes each a personal message in your voice once the campaign starts, on WhatsApp if you have their number.</p>
+            <textarea ref={ref} value={value} onChange={(e) => setValue(e.target.value)} rows={6} className={`${input} mt-6 text-base`}
+              placeholder={"One person per line: Name | phone | email | LinkedIn | what you know\nOmar Ali | +1 425 555 0101 | | | parent at MAPS, son in 9th grade, came to the Seattle summit\nSarah Khan | | sarah@school.org | linkedin.com/in/sarahk | runs the Pace Academy newsletter"} />
+            <label className="mt-2 inline-block cursor-pointer text-sm font-semibold text-clay underline underline-offset-2">
+              or upload a CSV
+              <input type="file" accept=".csv,.txt" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { const t = await file.text(); setValue((v) => `${v ? v + "\n" : ""}${t}`); } }} />
+            </label>
+            {value.trim() && (
+              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-line bg-paper p-4 text-sm">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#b8401f]" />
+                <span><b>These people know me and agreed to hear from me.</b> <span className="text-muted">SoldOut will contact them directly, without waiting for them to text JOIN.</span></span>
+              </label>
+            )}
+            <div className="mt-8 flex items-center justify-between">
+              <button type="button" onClick={back} disabled={!history.length} className="text-sm text-muted underline disabled:opacity-0">← Back</button>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => savePeople(true)} className="rounded-full px-4 py-3 text-sm font-semibold text-muted hover:bg-sand">Skip for now</button>
+                <button type="button" onClick={() => savePeople(false)} disabled={!value.trim() || !consent} className="rounded-full bg-clay px-7 py-3.5 font-bold text-white hover:bg-clay-dark disabled:opacity-40">
+                  Add {value.trim() ? value.trim().split(/\n/).filter((l) => l.trim()).length : ""} contact{value.trim().split(/\n/).filter((l) => l.trim()).length === 1 ? "" : "s"} →
+                </button>
+              </div>
             </div>
           </div>
         ) : f?.key === "mode" ? (

@@ -4,6 +4,7 @@ import { findPeople } from "./prospects";
 import { approveAndSend } from "./connector";
 import { emailConfigured } from "./email";
 import { draftStrategy } from "./strategy";
+import { draftContactOpeners } from "./contacts";
 
 // Autopilot: the whole flow runs without a human. One switch (Event.autopilot = false) stops it.
 // strategy → approve → research communities → use GO/NO-GO → find people → email openers.
@@ -18,7 +19,7 @@ export async function approveStrategy(strategyId: string) {
   if (event && process.env.MONID_API_KEY) {
     const key = `researching:${event.id}`;
     const busy = await db.kV.findUnique({ where: { key } });
-    if (busy?.value !== "1" && !(await db.target.count({ where: { eventId: event.id } }))) {
+    if (busy?.value !== "1" && !(await db.target.count({ where: { eventId: event.id, kind: { not: "network" } } }))) {
       await db.kV.upsert({ where: { key }, create: { key, value: "1" }, update: { value: "1" } });
       void expandTargets(event, s)
         .catch((e) => console.error("[targets]", (e as Error).message))
@@ -62,7 +63,9 @@ export async function advance(eventId: string) {
     }
 
     if ((await db.kV.findUnique({ where: { key: `researching:${eventId}` } }))?.value === "1") return;
-    const targets = await db.target.findMany({ where: { eventId } });
+    // The organizer's own contacts get their personal openers as soon as the plan is approved.
+    await draftContactOpeners(event).catch((e) => console.error("[autopilot] openers:", (e as Error).message));
+    const targets = await db.target.findMany({ where: { eventId, kind: { not: "network" } } });
     if (!targets.length) {
       await approveStrategy(strategy.id); // kicks research off if it never started
       return;
@@ -88,6 +91,17 @@ export async function advance(eventId: string) {
 
     // Email openers to connectors with a work email, under the daily cap.
     if (event.mode !== "auto") return; // approve mode: each first message waits for the organizer
+    // Consented contacts first: they asked to hear from you.
+    const mine = await db.prospect.findMany({ where: { eventId, status: "found", opener: { not: null } } });
+    for (const p of mine) {
+      const meta = JSON.parse(p.research ?? "{}") as { consent?: boolean };
+      const ch = JSON.parse(p.channels) as { whatsapp?: string; email?: string };
+      if (!meta.consent || !(ch.whatsapp || (ch.email && emailConfigured()))) continue;
+      const fresh = await db.event.findUnique({ where: { id: eventId }, select: { autopilot: true } });
+      if (!fresh?.autopilot) return;
+      await approveAndSend(p.id).catch((e) => console.error("[autopilot] contact:", (e as Error).message));
+      console.log(`[autopilot] ${event.keyword}: reached your contact ${p.name}`);
+    }
     if (!emailConfigured()) return;
     let budget = DAILY_EMAIL_CAP - (await emailsSentToday(eventId));
     if (budget <= 0) return;

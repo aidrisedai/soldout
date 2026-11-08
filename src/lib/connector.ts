@@ -11,8 +11,24 @@ import { emailConfigured, markHandled, replyEmail, sendEmail, unrepliedEmails, t
 
 export async function approveAndSend(prospectId: string) {
   const p = await db.prospect.findUniqueOrThrow({ where: { id: prospectId } });
-  const channels = JSON.parse(p.channels) as { email?: string; linkedin?: string };
-  const subject = (JSON.parse(p.research ?? "{}") as { subject?: string }).subject ?? "Hello from EdAI";
+  const channels = JSON.parse(p.channels) as { email?: string; linkedin?: string; whatsapp?: string };
+  const meta = JSON.parse(p.research ?? "{}") as { subject?: string; consent?: boolean };
+  const subject = meta.subject ?? "Hello from EdAI";
+  if (!p.opener) throw new Error("The opener isn't written yet. Give it a few seconds.");
+  // Consented contacts with a phone: start the WhatsApp conversation directly (no JOIN needed).
+  if (channels.whatsapp && meta.consent) {
+    const event = await db.event.findUniqueOrThrow({ where: { id: p.eventId } });
+    const phone = `wa:${channels.whatsapp}`;
+    const contact =
+      (await db.contact.findUnique({ where: { eventId_phone: { eventId: p.eventId, phone } } })) ??
+      (await db.contact.create({ data: { eventId: p.eventId, phone, channel: "whatsapp", referredBy: p.joinCode } }));
+    await db.outcome.create({ data: { eventId: p.eventId, contactId: contact.id, type: "opted_in", detail: "your contact (consented)" } });
+    const { deliver } = await import("./inbound");
+    await deliver(event, contact, p.opener);
+    await db.touch.create({ data: { prospectId: p.id, channel: "whatsapp", direction: "out", body: p.opener, status: "sent" } });
+    await db.prospect.update({ where: { id: p.id }, data: { status: "contacted" } });
+    return { sent: "whatsapp" };
+  }
   if (channels.email && emailConfigured()) {
     // Every first email carries an easy opt-out; a "no thanks" ends the conversation for good.
     const body = `${p.opener ?? ""}\n\nIf this isn't relevant for you, just reply "no thanks" and I won't write again.`;

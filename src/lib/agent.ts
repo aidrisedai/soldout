@@ -279,7 +279,8 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
     if (last && last.role === role) last.content = `${last.content}\n${m.body}`;
     else messages.push({ role, content: m.body });
   }
-  if (messages[0]?.role !== "user") messages.unshift({ role: "user", content: "JOIN" });
+  // Organizer contacts are reached first (no JOIN); give the model that context.
+  if (messages[0]?.role !== "user") messages.unshift({ role: "user", content: contact.referredBy ? "(You reached out to this person first, on the organizer's behalf. They know the organizer and agreed to hear from them.)" : "JOIN" });
 
   const { client, model } = llm();
   const system = systemPrompt(c, answers, openFlags) + (c.flagged ? "\n\nNOTE: this message touches an organizer-only topic and has ALREADY been flagged. Tell the parent the organizer will reply on that point; do not answer it yourself." : "");

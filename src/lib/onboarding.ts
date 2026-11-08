@@ -12,6 +12,7 @@ export const FIELDS: Field[] = [
   { key: "audience", label: "Who it’s for", type: "text", optional: true, fallback: "Who is it for?", placeholder: "e.g. Parents of grades 6–12" },
   { key: "content", label: "Program brief", type: "longtext", fallback: "Now give me everything you have about the program: files, links, anything. I’ll build the brief.", placeholder: "" },
   { key: "applyLink", label: "Enroll link", type: "url", optional: true, fallback: "Where do families go to enroll? Paste the link.", placeholder: "https://…" },
+  { key: "people", label: "Your contacts", type: "longtext", optional: true, fallback: "Are there people you already know that SoldOut should reach out to directly?" },
   { key: "mode", label: "How SoldOut runs", type: "text", fallback: "Last one: how should SoldOut run your campaign?" },
 ];
 
