@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import { phoneCtx, readUnread, sendFileViaPhone, sendViaPhone } from "../src/lib/waPhone";
 import { resolveAttachment } from "../src/lib/files";
 import { deviceLocked } from "../src/lib/dot";
+import { processConnectorReplies } from "../src/lib/connector";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 
@@ -121,11 +122,26 @@ async function whatsappPhoneLoop() {
   }
 }
 
+// Connector email conversations (AgentMail): read replies and answer them.
+async function connectorLoop() {
+  console.log("[connectors] watching email replies");
+  for (;;) {
+    try {
+      const n = await processConnectorReplies();
+      if (n) console.log(`[connectors] handled ${n} repl${n === 1 ? "y" : "ies"}`);
+    } catch (e) {
+      console.error("[connectors]", (e as Error).message);
+    }
+    await sleep(20000);
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const loops: Promise<unknown>[] = [];
 if (process.env.TELEGRAM_BOT_TOKEN) loops.push(telegramLoop(process.env.TELEGRAM_BOT_TOKEN));
 if (process.env.MOBILERUN_API_KEY) loops.push(mobilerunLoop(process.env.MOBILERUN_API_KEY));
 if (process.env.MOBILERUN_API_KEY && process.env.WHATSAPP_VIA !== "cloud") loops.push(whatsappPhoneLoop());
+if (process.env.AGENTMAIL_API_KEY) loops.push(connectorLoop());
 if (!loops.length) console.log("Nothing to poll: set TELEGRAM_BOT_TOKEN and/or MOBILERUN_API_KEY in .env");
 Promise.all(loops).catch((e) => { console.error(e); process.exit(1); });

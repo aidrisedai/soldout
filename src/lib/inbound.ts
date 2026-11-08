@@ -51,7 +51,9 @@ export async function handleInbound(input: InboundInput): Promise<InboundResult>
     }
     contact = await db.contact.findUnique({ where: { eventId_phone: { eventId: event.id, phone } } });
     if (!contact) {
-      contact = await db.contact.create({ data: { eventId: event.id, phone, channel } });
+      const ref = join.keyword && join.keyword !== event.keyword ? join.keyword : null;
+      contact = await db.contact.create({ data: { eventId: event.id, phone, channel, referredBy: ref } });
+      if (ref) await db.prospect.updateMany({ where: { joinCode: ref, status: { in: ["contacted", "replied", "engaged"] } }, data: { status: "referred" } });
       await db.outcome.create({ data: { eventId: event.id, contactId: contact.id, type: "opted_in" } });
     } else if (contact.status === "opted_out") {
       contact = await db.contact.update({ where: { id: contact.id }, data: { status: "active", optedInAt: new Date() } });
@@ -95,6 +97,9 @@ async function resolveEvent(eventId: string | undefined, keyword: string | null)
   if (keyword) {
     const byKeyword = await db.event.findUnique({ where: { keyword } });
     if (byKeyword) return byKeyword;
+    // A connector's personal code, e.g. JOIN FOUNDER-SARAH
+    const p = await db.prospect.findUnique({ where: { joinCode: keyword } });
+    if (p) return db.event.findUnique({ where: { id: p.eventId } });
   }
   if (eventId) return db.event.findUnique({ where: { id: eventId } });
   const all = await db.event.findMany({ take: 2 });

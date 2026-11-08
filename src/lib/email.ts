@@ -23,8 +23,10 @@ export async function sendEmail(to: string, subject: string, text: string, label
   return { messageId: r.messageId, threadId: r.threadId };
 }
 
-export async function replyEmail(messageId: string, text: string) {
-  const r = await am().inboxes.messages.reply(inbox(), messageId, { text });
+export type MailAttachment = { filename: string; content: string; contentType: string }; // content = base64
+
+export async function replyEmail(messageId: string, text: string, attachments?: MailAttachment[]) {
+  const r = await am().inboxes.messages.reply(inbox(), messageId, { text, attachments });
   await am().inboxes.messages.update(inbox(), messageId, { addLabels: ["soldout-replied"], removeLabels: ["unread"] }).catch(() => {});
   return { messageId: r.messageId, threadId: r.threadId };
 }
