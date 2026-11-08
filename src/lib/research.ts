@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Event, Strategy } from "@prisma/client";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 import { webSearch, type WebResult } from "./monid";
 import type { StrategyBody } from "./strategy";
 
@@ -9,9 +9,7 @@ import type { StrategyBody } from "./strategy";
 
 async function toolCall<T>(system: string, user: string, tool: Anthropic.Tool, maxTokens = 3000): Promise<T> {
   const { client, model } = llm();
-  const res = await client.messages
-    .stream({ model, max_tokens: maxTokens, system, tools: [tool], messages: [{ role: "user", content: user }] })
-    .finalMessage();
+  const res = await complete({ model, max_tokens: maxTokens, system, tools: [tool], messages: [{ role: "user", content: user }] });
   const use = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
   if (!use) throw new Error(`${tool.name}: no result`);
   return use.input as T;

@@ -22,3 +22,24 @@ export function llm(): { client: Anthropic; model: string; provider: "naive" | "
   }
   throw new Error("No model key configured: set NAIVE_API_KEY (preferred) or ANTHROPIC_API_KEY in .env");
 }
+
+// Every model call goes through here: stream (avoids proxy timeouts on long outputs),
+// retry once on a dropped stream, then fall back to a plain request.
+export async function complete(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> {
+  const { client } = llm();
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await client.messages.stream(params).finalMessage();
+    } catch (e) {
+      lastErr = e;
+      console.error(`[llm] stream attempt ${attempt + 1} failed: ${(e as Error).message}`);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  try {
+    return await client.messages.create(params);
+  } catch (e) {
+    throw lastErr ?? e;
+  }
+}

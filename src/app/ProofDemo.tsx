@@ -1,0 +1,156 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+// Real output from SoldOut's first campaign (EdAI Founder). Individuals shown by role only.
+const STEPS: { tag: string; title: string; body: React.ReactNode }[] = [
+  {
+    tag: "Goal",
+    title: "The organizer sets the goal",
+    body: (
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        {[["Program", "EdAI Founder"], ["Seats", "20"], ["Starts", "Sunday, Nov 15"], ["Tuition", "$1,200"]].map(([k, v]) => (
+          <div key={k} className="rounded-lg bg-white/5 p-3"><p className="text-[11px] uppercase text-zinc-400">{k}</p><p className="font-semibold">{v}</p></div>
+        ))}
+        <div className="col-span-2 rounded-lg bg-white/5 p-3 text-zinc-300">+ the organizer’s own answer pack, videos in Drive, brand files</div>
+      </div>
+    ),
+  },
+  {
+    tag: "Diagnosis",
+    title: "It finds what’s actually in the way",
+    body: (
+      <p className="leading-relaxed text-zinc-200">
+        “Founder only works for students who already have a first version of a product, a much smaller group than ‘parents of Muslim students
+        in grades 6–12.’ A general campaign will mostly reach families who belong in Builder.”
+      </p>
+    ),
+  },
+  {
+    tag: "Policy + test",
+    title: "Guiding policies, each with a cheap test",
+    body: (
+      <div className="space-y-2 text-sm">
+        <div className="rounded-lg bg-white/5 p-3"><p className="font-semibold">Go where products have already been built</p><p className="text-zinc-400">Past cohorts and summit communities, through partners who were already there.</p></div>
+        <div className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3 text-emerald-200">Test: partners share the JOIN code. Success = opt-ins who already have a product.</div>
+      </div>
+    ),
+  },
+  {
+    tag: "Communities",
+    title: "It researches each community, then GO / NO-GO",
+    body: (
+      <div className="space-y-2 text-sm">
+        {[["MAPS Redmond", 66, "Large youth program (ages 13–18) across Greater Seattle; Director of Education named for teen programs."], ["Five Before College", 70, "Admissions coaching for Muslim teens; founder reachable for a newsletter feature."], ["PACE Academy WA", 52, "Islamic K–10 school in Redmond; principal reachable by email."]].map(([n, s, d]) => (
+          <div key={n as string} className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3">
+            <div><p className="font-semibold">{n}</p><p className="text-xs text-zinc-400">{d}</p></div>
+            <span className="whitespace-nowrap rounded-full bg-emerald-400/15 px-2 py-0.5 text-xs font-bold text-emerald-300">fit {s} · GO</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    tag: "People",
+    title: "It finds the connectors in each GO community",
+    body: (
+      <div className="space-y-2 text-sm">
+        {[["Director of Education", "Warm intro", "Leads teen education programs"], ["Community Organizer", "LinkedIn", "Knows which families and programs are active"], ["Educator & developer", "LinkedIn", "Links youth programs with tech careers"]].map(([r, c, w]) => (
+          <div key={r} className="flex items-center justify-between rounded-lg bg-white/5 p-3">
+            <div><p className="font-semibold">{r} <span className="ml-1 rounded bg-violet-400/20 px-1.5 text-[10px] font-bold uppercase text-violet-200">connector</span></p><p className="text-xs text-zinc-400">{w}</p></div>
+            <span className="rounded bg-white/10 px-2 py-0.5 text-xs">{c}</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    tag: "Opener",
+    title: "A personal first message, in the organizer’s voice",
+    body: (
+      <div className="rounded-xl bg-white p-4 text-sm text-zinc-900">
+        <p className="text-[11px] font-semibold text-zinc-400">To: Community Organizer · LinkedIn · approved by organizer</p>
+        <p className="mt-2">“Hi, I’m Azeez. I’ve admired how MAPS brings families in from across the Puget Sound region. When a youth event draws a crowd, someone is doing serious organizing behind it. I’d love to hear what’s working well for you this season. What do families respond to most when it comes to the teen events?”</p>
+      </div>
+    ),
+  },
+  {
+    tag: "Conversation",
+    title: "A real conversation: share more only as interest grows",
+    body: (
+      <div className="space-y-2 text-sm">
+        <p className="ml-auto max-w-[80%] rounded-xl rounded-br-sm bg-zinc-700 px-3 py-2">“Nothing too crazy at this point.”</p>
+        <p className="max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-zinc-900">“Honestly, a quiet season is pretty normal. Something that’s been working for us is giving teens a real problem to work on… Do you have any teens who like tech?”</p>
+        <p className="text-xs text-zinc-400">Next: PDF when they want details → “who do you know who’d love this?” → their own JOIN code to forward.</p>
+      </div>
+    ),
+  },
+  {
+    tag: "Parents",
+    title: "Families opt in and get the right format",
+    body: (
+      <div className="space-y-2 text-sm">
+        <p className="ml-auto max-w-[70%] rounded-xl rounded-br-sm bg-emerald-600 px-3 py-2 text-right">JOIN FOUNDER</p>
+        <p className="max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-zinc-900">Fit questions, one at a time → “10th grader, built a study planner about 20 classmates use” → <b>Founder</b></p>
+        <p className="ml-auto max-w-[70%] rounded-xl rounded-br-sm bg-emerald-600 px-3 py-2 text-right">Can I see what students do?</p>
+        <p className="max-w-[85%] rounded-xl rounded-bl-sm bg-white px-3 py-2 text-zinc-900">🎬 <b>Video</b> from the organizer’s Drive · later 📄 <b>PDF brief</b> to share at home</p>
+      </div>
+    ),
+  },
+  {
+    tag: "Organizer",
+    title: "Only what needs a human comes to the organizer",
+    body: (
+      <div className="space-y-2 text-sm">
+        <div className="rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-rose-100">Flagged: “Do you offer refunds if it doesn’t work out?”</div>
+        <div className="rounded-lg bg-white/5 p-3 text-zinc-200">Organizer replies from the dashboard → the parent gets the answer in the same chat.</div>
+      </div>
+    ),
+  },
+  {
+    tag: "Paid",
+    title: "Enrollment link, paid seat, scoreboard",
+    body: (
+      <div className="text-sm">
+        <div className="flex items-end justify-between"><p className="text-4xl font-black">1<span className="text-xl text-zinc-500">/20</span></p><p className="text-zinc-400">seats paid · need 1.3/day</p></div>
+        <div className="mt-3 h-2 rounded-full bg-white/10"><div className="h-2 w-[5%] rounded-full bg-emerald-400" /></div>
+        <p className="mt-3 text-zinc-300">Results by community, connector and channel decide what to try next. Then back to the strategy.</p>
+      </div>
+    ),
+  },
+];
+
+export default function ProofDemo() {
+  const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return;
+    const t = setTimeout(() => setI((x) => (x + 1) % STEPS.length), 4200);
+    return () => clearTimeout(t);
+  }, [i, paused]);
+  const s = STEPS[i];
+  return (
+    <div className="grid gap-8 lg:grid-cols-[260px_1fr]" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <ol className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5">
+        {STEPS.map((x, k) => (
+          <li key={x.tag}>
+            <button onClick={() => setI(k)} className={`flex w-full items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition ${k === i ? "bg-white/10 font-semibold text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
+              <span className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-bold ${k < i ? "bg-emerald-500 text-zinc-950" : k === i ? "bg-emerald-400 text-zinc-950" : "bg-white/10"}`}>{k < i ? "✓" : String.fromCharCode(65 + k)}</span>
+              {x.tag}
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="relative min-h-[340px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 p-6">
+        <div className="absolute left-0 top-0 h-0.5 bg-emerald-400 transition-all duration-300" style={{ width: `${((i + 1) / STEPS.length) * 100}%` }} />
+        <p className="font-mono text-xs font-bold text-emerald-400">STEP {String.fromCharCode(65 + i)} · {s.tag.toUpperCase()}</p>
+        <h3 className="mt-2 text-2xl font-black tracking-tight">{s.title}</h3>
+        <div key={i} className="mt-5 animate-[fadein_.4s_ease]">{s.body}</div>
+        <div className="mt-6 flex items-center justify-between text-xs text-zinc-500">
+          <span>Real output from SoldOut’s first campaign. People shown by role only.</span>
+          <span>{paused ? "Paused" : "Auto-playing"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

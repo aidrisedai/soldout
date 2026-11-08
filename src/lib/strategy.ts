@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Event } from "@prisma/client";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 
 // Good Strategy / Bad Strategy kernel: diagnosis → guiding policies → coherent actions.
 export type StrategyBody = {
@@ -88,7 +88,7 @@ Draft the strategy and submit it with submit_strategy.`;
 
   const { client, model } = llm();
   // Stream so long drafts don't hit the proxy's upstream timeout.
-  const res = await client.messages.stream({ model, max_tokens: 4096, system, tools: [TOOL], messages: [{ role: "user", content: user }] }).finalMessage();
+  const res = await complete({ model, max_tokens: 4096, system, tools: [TOOL], messages: [{ role: "user", content: user }] });
   const use = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use" && b.name === "submit_strategy");
   if (!use) throw new Error("Strategist did not return a strategy");
   return use.input as StrategyBody;

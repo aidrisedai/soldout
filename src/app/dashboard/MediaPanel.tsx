@@ -37,9 +37,9 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
 
   const running = task?.status === "running";
   return (
-    <div className="mt-6 rounded-lg border p-4">
+    <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold">Videos & PDFs for parents</h3>
+        <h3 className="text-lg font-black">Videos & PDFs for parents</h3>
         <div className="flex flex-wrap gap-1">
           {[["find_videos", "Find videos"], ["make_pdf", "Make branded PDF"], ["make_video", "Make parent video"]].map(([k, label]) => (
             <button key={k} onClick={() => askDot(k)} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-zinc-50 disabled:opacity-50">{label}</button>

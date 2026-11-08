@@ -26,6 +26,7 @@ model Event {
   content         String // the organizer's own content; the ONLY source of answers
   fitQuestions    String // JSON: [{ key, question }]
   clips           String   @default("[]") // JSON: [{ id, title, url, answers }]
+  accounts        String   @default("{}") // JSON: organizer accounts to act from { linkedin, instagram, email }
   createdAt       DateTime @default(now())
 
   contacts      Contact[]

@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Contact, Event } from "@prisma/client";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 import { parseFitQuestions, type FitQuestion } from "./event";
 import { createBrief } from "./brief";
 
@@ -284,7 +284,7 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
 
   let text = "";
   for (let i = 0; i < 6; i++) {
-    const res = await client.messages.stream({ model, max_tokens: 1024, system, tools: TOOLS, messages }).finalMessage();
+    const res = await complete({ model, max_tokens: 1024, system, tools: TOOLS, messages });
     const textParts = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text);
     if (textParts.length) text = textParts.join("\n").trim();
     const uses = res.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");

@@ -5,7 +5,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Event } from "@prisma/client";
 import PDFDocument from "pdfkit";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 
 export type BriefBody = {
   title: string;
@@ -53,9 +53,7 @@ Price: ${event.price ?? "see content"} · When: ${event.dateText ?? "see content
 ${event.content}
 </content>`;
   const { client, model } = llm();
-  const res = await client.messages
-    .stream({ model, max_tokens: 3000, system, tools: [TOOL], messages: [{ role: "user", content: user }] })
-    .finalMessage();
+  const res = await complete({ model, max_tokens: 3000, system, tools: [TOOL], messages: [{ role: "user", content: user }] });
   const use = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
   if (!use) throw new Error("Brief writer returned nothing");
   return use.input as BriefBody;

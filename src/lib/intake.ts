@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 import type { Clip, FitQuestion } from "./event";
 
 export async function uniqueKeyword(wanted: string): Promise<string> {
@@ -39,7 +39,7 @@ export async function draftFitQuestions(content: string, audience: string): Prom
     },
   };
   const { client, model } = llm();
-  const res = await client.messages.create({
+  const res = await complete({
     model,
     max_tokens: 800,
     tools: [tool],

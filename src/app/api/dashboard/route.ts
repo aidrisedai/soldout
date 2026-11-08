@@ -6,6 +6,15 @@ export async function GET() {
   const data = await Promise.all(
     events.map(async (e) => {
       const count = (type: string) => db.outcome.count({ where: { eventId: e.id, type } });
+      const [targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount] = await Promise.all([
+        db.target.count({ where: { eventId: e.id } }),
+        db.target.count({ where: { eventId: e.id, decision: "go" } }),
+        db.target.count({ where: { eventId: e.id, fitScore: null } }),
+        db.prospect.count({ where: { eventId: e.id } }),
+        db.prospect.count({ where: { eventId: e.id, status: { notIn: ["found", "done"] } } }),
+        db.contact.count({ where: { eventId: e.id, referredBy: { not: null } } }),
+        db.mediaItem.count({ where: { eventId: e.id, status: "approved" } }),
+      ]);
       const [optIns, answered, linksSent, paid, flagsTotal, steppedIn, flags, ready, strategy] = await Promise.all([
         count("opted_in"),
         count("answered"),
@@ -27,6 +36,8 @@ export async function GET() {
         deadline: e.deadline,
         price: e.price,
         score: { optIns, answered, linksSent, paid, flagsTotal, steppedIn },
+        pipeline: { targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount },
+        dateText: e.dateText,
         openFlags: flags,
         awaitingPayment: ready,
         strategy: strategy ? { id: strategy.id, status: strategy.status, body: JSON.parse(strategy.body), createdAt: strategy.createdAt, approvedAt: strategy.approvedAt } : null,

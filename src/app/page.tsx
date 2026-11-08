@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ProofDemo from "./ProofDemo";
 
 const CHANNELS = ["WhatsApp", "Email", "LinkedIn", "Instagram", "SMS", "Newsletters", "In person"];
 
@@ -78,8 +79,8 @@ export default function Home() {
               <Link href="/intake" className="rounded-xl bg-emerald-500 px-6 py-3.5 font-bold text-zinc-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400">
                 Start a campaign →
               </Link>
-              <a href="#how" className="rounded-xl border border-white/15 px-6 py-3.5 font-semibold text-white hover:bg-white/5">
-                See how it works
+              <a href="#proof" className="rounded-xl border border-white/15 px-6 py-3.5 font-semibold text-white hover:bg-white/5">
+                Watch it work
               </a>
             </div>
             <div className="mt-10 flex flex-wrap gap-2">
@@ -171,58 +172,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* STRATEGY EXAMPLE */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-widest text-emerald-600">Real strategy, not a template</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">It tells you what&apos;s actually in the way</h2>
-            <p className="mt-4 text-lg text-zinc-600">
-              Every campaign starts with a diagnosis, a few guiding policies, and a cheap test for each one, so you know what to
-              try first and how you&apos;ll know it worked.
-            </p>
-            <ul className="mt-6 space-y-3 text-zinc-700">
-              <li className="flex gap-3"><Check /> A who-next list of communities and messengers, with the channel and message for each</li>
-              <li className="flex gap-3"><Check /> Answers grounded only in your content; unknowns come to you</li>
-              <li className="flex gap-3"><Check /> The right format per question: text, your videos, or a PDF brief</li>
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
-            <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Diagnosis · EdAI Founder campaign</p>
-            <p className="mt-2 text-zinc-800">
-              Founder only works for students who already have a first version of a product, a much smaller group than
-              &ldquo;parents of Muslim students in grades 6–12.&rdquo; A general campaign will mostly reach families who belong
-              in Builder.
-            </p>
-            <p className="mt-5 text-xs font-bold uppercase tracking-wider text-zinc-500">Guiding policy</p>
-            <p className="mt-2 font-semibold">Go where products have already been built: past cohorts and summit communities.</p>
-            <p className="mt-1 text-sm text-zinc-500">Test: partners share the JOIN code; success = opt-ins who already have a product.</p>
-            <p className="mt-5 text-xs font-bold uppercase tracking-wider text-zinc-500">Who next</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-sm">
-              {["MAPS Redmond · youth coordinator · Email", "Seattle youth partner · director · WhatsApp", "School newsletter · editor · Email"].map((w) => (
-                <span key={w} className="rounded-lg bg-zinc-100 px-2.5 py-1">{w}</span>
-              ))}
-            </div>
-          </div>
+      {/* PROOF: the whole process, automated */}
+      <section id="proof" className="bg-zinc-950 py-20 text-white">
+        <div className="mx-auto max-w-6xl px-4">
+          <p className="text-sm font-bold uppercase tracking-widest text-emerald-400">Watch it work</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">From goal to paid seat, A to Z</h2>
+          <p className="mt-3 max-w-2xl text-zinc-400">Every step below is SoldOut&apos;s real output from its first campaign, EdAI&apos;s Founder program. Nothing is mocked up.</p>
+          <div className="mt-10"><ProofDemo /></div>
         </div>
       </section>
 
       {/* PRINCIPLES */}
-      <section className="bg-zinc-950 py-20 text-white">
+      <section className="bg-zinc-50 py-20">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-black tracking-tight sm:text-4xl">Trust is the whole point, so we protect it</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              ["Opt-in only", "Families are contacted only after they message your JOIN code. No scraped numbers, no school lists."],
+              ["Public info only", "Research uses public, professional information: org sites, public profiles. No bought lists, nothing about anyone's children."],
               ["Your words, no inventions", "Answers come only from your content. No made-up stats, quotes or testimonials, ever."],
-              ["You approve first", "The strategy and every outreach message wait for your approval before anything is sent."],
+              ["You approve, you can take over", "The strategy, every person and every first message wait for your approval. Take over any conversation at any time."],
               ["Sensitive topics go to you", "Refunds, installments and anything unconfirmed are flagged for you to answer."],
-              ["Messengers, not strangers", "Research covers communities and the people who speak for them, never private individuals."],
+              ["A respectful first touch", "LinkedIn or email first, one follow-up at most, and \u201cno thanks\u201d is final. WhatsApp only after someone replies or texts JOIN."],
               ["Payments stay safe", "Payment links run in test mode until you switch them on."],
             ].map(([t, b]) => (
-              <div key={t} className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <h3 className="font-bold text-emerald-300">{t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-300">{b}</p>
+              <div key={t} className="rounded-2xl border border-zinc-200 bg-white p-6">
+                <h3 className="font-bold text-emerald-700">{t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600">{b}</p>
               </div>
             ))}
           </div>

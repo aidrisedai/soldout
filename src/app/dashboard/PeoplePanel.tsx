@@ -71,8 +71,8 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
 
   if (!targets.length) return null;
   return (
-    <div className="mt-6 rounded-lg border p-4">
-      <h3 className="font-semibold">People to reach</h3>
+    <div>
+      <h3 className="text-lg font-black">People to reach</h3>
       <p className="mb-3 text-xs text-zinc-500">Connectors first. You approve each opener; SoldOut runs the conversation (share step by step, then ask for a seat or an introduction). Take over any time.</p>
       {error && <p className="mb-2 text-sm text-rose-700">{error}</p>}
       <div className="space-y-5">

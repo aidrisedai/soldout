@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Event } from "@prisma/client";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 import { monidRun } from "./monid";
 
 // Step 3 of docs/FLOW.md: people in a GO community, connectors first, each with a person card.
@@ -60,8 +60,7 @@ export async function findPeople(event: Event, targetId: string) {
   }
 
   const { client, model } = llm();
-  const res = await client.messages
-    .stream({
+  const res = await complete({
       model,
       max_tokens: 4000,
       tools: [CARD_TOOL],
@@ -81,8 +80,7 @@ ${people.map((p) => `- ${p.fullName} | ${p.headline ?? ""} | ${p.location ?? ""}
 Pick up to 5 people (include people named in WAY IN if they fit), connectors first.`,
         },
       ],
-    })
-    .finalMessage();
+    });
   const use = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
   const picked = ((use?.input as { people?: Record<string, string>[] })?.people ?? []).slice(0, 5);
 

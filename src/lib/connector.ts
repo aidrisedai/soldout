@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Event, Prospect } from "@prisma/client";
 import { db } from "./db";
-import { llm } from "./llm";
+import { complete, llm } from "./llm";
 import { createBrief } from "./brief";
 import { emailConfigured, markHandled, replyEmail, sendEmail, unrepliedEmails, type MailAttachment } from "./email";
 
@@ -91,7 +91,7 @@ export async function connectorReply(prospectId: string): Promise<{ text: string
   let text = "";
   const { client, model } = llm();
   for (let i = 0; i < 4; i++) {
-    const res = await client.messages.stream({ model, max_tokens: 900, system: system(e, p), tools: TOOLS, messages }).finalMessage();
+    const res = await complete({ model, max_tokens: 900, system: system(e, p), tools: TOOLS, messages });
     const t = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
     if (t) text = t;
     const uses = res.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");

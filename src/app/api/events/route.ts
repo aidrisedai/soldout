@@ -55,8 +55,14 @@ export async function POST(req: Request) {
       content,
       fitQuestions: JSON.stringify(fit),
       clips: JSON.stringify(parseClipLines(s("clips"))),
+      accounts: JSON.stringify({ linkedin: s("acctLinkedin") || undefined, instagram: s("acctInstagram") || undefined, email: s("acctEmail") || undefined }),
     },
   });
+  // Organizer's network for warm intros: "Name | how you know them | community | contact" per line.
+  for (const line of s("network").split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const [name, relationship, community, contact] = line.split("|").map((x) => x?.trim() || undefined);
+    if (name) await db.networkContact.create({ data: { eventId: event.id, name, relationship, community, contact } });
+  }
   // SoldOut takes over from the goal: start drafting the strategy right away.
   void draftStrategy(event)
     .then((body) => db.strategy.create({ data: { eventId: event.id, body: JSON.stringify(body) } }))

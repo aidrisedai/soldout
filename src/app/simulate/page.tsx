@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Ev = { id: string; name: string; keyword: string; organization: string };
@@ -104,8 +105,14 @@ export default function Simulate() {
   const quick = ev ? [`JOIN ${ev.keyword}`, "What time are the sessions?", "Can you send me something I can share with my husband?", "Can I see what students actually do?", "Do you offer refunds?", "We're ready to sign up", "STOP"] : [];
 
   return (
-    <main className="min-h-screen bg-zinc-100 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-zinc-100">
+      <header className="bg-zinc-950 text-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <Link href="/" className="text-lg font-black tracking-tight">Sold<span className="text-emerald-400">Out</span></Link>
+          <Link href="/dashboard" className="text-sm text-zinc-300 hover:text-white">Dashboard</Link>
+        </div>
+      </header>
+      <div className="mx-auto max-w-6xl p-4 md:p-8">
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Simulate a parent</h1>

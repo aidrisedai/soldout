@@ -33,9 +33,9 @@ export default function TargetsPanel({ eventId, approved }: { eventId: string; a
 
   if (!approved) return null;
   return (
-    <div className="mt-6 rounded-lg border p-4">
+    <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold">Communities to target</h3>
+        <h3 className="text-lg font-black">Communities to target</h3>
         {!researching && !targets.length && (
           <button onClick={start} className="rounded border px-2 py-0.5 text-sm hover:bg-zinc-50">Research communities</button>
         )}

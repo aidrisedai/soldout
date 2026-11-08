@@ -18,6 +18,7 @@ export async function GET() {
     applyLink: "https://edai.fun/apply",
     paymentLink: process.env.STRIPE_PAYMENT_LINK ?? "",
     keyword: "FOUNDER",
+    acctEmail: process.env.AGENTMAIL_INBOX_ID ?? "",
     content,
     fitQuestions: [
       "How many teens are you thinking of signing up, and what grade is each one in?",
