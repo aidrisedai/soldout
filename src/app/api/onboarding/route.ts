@@ -18,7 +18,7 @@ const TOOL: Anthropic.Tool = {
       extracted: {
         type: "object",
         description: "Field values clearly stated in the latest answer (only keys from the list; dates as YYYY-MM-DD; seats as a number).",
-        properties: Object.fromEntries(FIELDS.filter((f) => !["intent", "content", "applyLink"].includes(f.key)).map((f) => [f.key, { type: "string" }])),
+        properties: Object.fromEntries(FIELDS.filter((f) => !["intent", "content", "applyLink", "mode"].includes(f.key)).map((f) => [f.key, { type: "string" }])),
       },
       questionFor: { type: "string", description: "The key of the field your question asks for (must be the first field still missing after your extraction)." },
       question: { type: "string", description: "The next question, phrased conversationally, building on what they said. One question only." },
@@ -61,7 +61,7 @@ Call the tool. The next question should ask for the FIRST still-missing field af
       const use = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
       const out = (use?.input ?? {}) as { ack?: string; extracted?: Record<string, string>; questionFor?: string; question?: string };
       for (const [k, v] of Object.entries(out.extracted ?? {})) {
-        if (v && !merged[k]?.trim() && !["content", "applyLink", "intent"].includes(k) && FIELDS.some((f) => f.key === k)) merged[k] = String(v);
+        if (v && !merged[k]?.trim() && !["content", "applyLink", "intent", "mode"].includes(k) && FIELDS.some((f) => f.key === k)) merged[k] = String(v);
       }
       ack = out.ack ?? "";
       question = out.question ?? "";

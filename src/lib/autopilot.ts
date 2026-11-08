@@ -55,6 +55,7 @@ export async function advance(eventId: string) {
       return;
     }
     if (strategy.status === "draft") {
+      if (event.mode !== "auto") return; // approve mode: the organizer approves the strategy
       await approveStrategy(strategy.id);
       console.log(`[autopilot] ${event.keyword}: strategy approved`);
       return;
@@ -86,6 +87,7 @@ export async function advance(eventId: string) {
     }
 
     // Email openers to connectors with a work email, under the daily cap.
+    if (event.mode !== "auto") return; // approve mode: each first message waits for the organizer
     if (!emailConfigured()) return;
     let budget = DAILY_EMAIL_CAP - (await emailsSentToday(eventId));
     if (budget <= 0) return;

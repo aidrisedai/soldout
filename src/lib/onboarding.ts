@@ -10,7 +10,8 @@ export const FIELDS: Field[] = [
   { key: "deadline", label: "By when", type: "date", fallback: "By when do you need them filled?" },
   { key: "price", label: "Price", type: "text", fallback: "What does it cost per student?", placeholder: "e.g. $1,200 per student" },
   { key: "audience", label: "Who it’s for", type: "text", optional: true, fallback: "Who is it for?", placeholder: "e.g. Parents of grades 6–12" },
-  { key: "content", label: "Program details", type: "longtext", fallback: "Last big one: paste your program details or FAQ. SoldOut only answers parents from this.", placeholder: "Who it’s for, schedule, what students do, who teaches, price, how to apply…" },
+  { key: "content", label: "Program brief", type: "longtext", fallback: "Now give me everything you have about the program: files, links, anything. I’ll build the brief.", placeholder: "" },
   { key: "applyLink", label: "Enroll link", type: "url", optional: true, fallback: "Where do families go to enroll? Paste the link.", placeholder: "https://…" },
+  { key: "mode", label: "How SoldOut runs", type: "text", fallback: "Last one: how should SoldOut run your campaign?" },
 ];
 

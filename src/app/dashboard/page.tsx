@@ -31,6 +31,7 @@ type EventRow = {
   price: string | null;
   dateText: string | null;
   autopilot: boolean;
+  mode: "approve" | "auto";
   score: { optIns: number; answered: number; linksSent: number; paid: number; flagsTotal: number; steppedIn: number };
   pipeline: { targetsTotal: number; targetsGo: number; targetsPending: number; prospects: number; contacted: number; referredParents: number; mediaCount: number; connectorReplies: number };
   openFlags: { id: string; question: string; reason: string; createdAt: string; contact: { phone: string; channel: string } }[];
@@ -48,6 +49,15 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 
 function nextStep(e: EventRow): { text: string; tab: Tab } {
+  if (e.autopilot && e.mode === "approve") {
+    if (!e.strategy) return { text: "Drafting the strategy (about 30 seconds)…", tab: "strategy" };
+    if (e.strategy.status === "draft") return { text: "Your turn: review the strategy and approve it.", tab: "strategy" };
+    if (!e.pipeline.targetsTotal || e.pipeline.targetsPending) return { text: "Researching the communities your policies point to…", tab: "communities" };
+    if (e.pipeline.targetsGo && !e.pipeline.prospects) return { text: "Finding the connectors in your GO communities…", tab: "people" };
+    if (e.openFlags.length) return { text: `${e.openFlags.length} parent question${e.openFlags.length > 1 ? "s" : ""} only you can answer.`, tab: "parents" };
+    if (e.pipeline.prospects > e.pipeline.contacted) return { text: "Your turn: approve the first messages to connectors.", tab: "people" };
+    return { text: "Conversations are running. SoldOut flags anything that needs you.", tab: "people" };
+  }
   if (e.autopilot) {
     if (!e.strategy) return { text: "Autopilot: drafting the strategy…", tab: "strategy" };
     if (e.strategy.status === "draft") return { text: "Autopilot: approving the strategy and starting research…", tab: "strategy" };
@@ -72,6 +82,8 @@ const STRATEGY_STEPS = ["Reading your program content…", "Finding what’s rea
 
 function rightNow(e: EventRow): { title: string; steps: string[] } | null {
   if (!e.autopilot) return null;
+  if (e.mode === "approve" && e.strategy?.status === "draft") return null;
+  if (e.mode === "approve" && e.pipeline.prospects && e.pipeline.prospects > e.pipeline.contacted && !e.pipeline.targetsPending) return null;
   if (!e.strategy) return { title: "Drafting your strategy", steps: STRATEGY_STEPS };
   if (e.strategy.status === "draft") return { title: "Approving the strategy", steps: ["Checking the plan against your goal…", "Approving it and starting research…"] };
   if (!e.pipeline.targetsTotal || e.pipeline.targetsPending)
@@ -90,10 +102,10 @@ function journey(e: EventRow): { letter: string; label: string; state: StepState
   return [
     { letter: "A", label: "Goal", state: "done", tab: "strategy", hint: `${e.goalSeats ?? "?"} seats${e.deadline ? ` by ${e.deadline}` : ""}` },
     { letter: "B", label: "Diagnosis", state: st ? "done" : "live", tab: "strategy", hint: st ? "What’s in the way" : "Drafting…" },
-    { letter: "C", label: "Policy + test", state: st?.status === "approved" ? "done" : st ? (on ? "live" : "attention") : "waiting", tab: "strategy", hint: st?.status === "approved" ? `${st.body.policies.length} policies` : "Approving…" },
+    { letter: "C", label: "Policy + test", state: st?.status === "approved" ? "done" : st ? (on && e.mode === "auto" ? "live" : "attention") : "waiting", tab: "strategy", hint: st?.status === "approved" ? `${st.body.policies.length} policies` : "Approving…" },
     { letter: "D", label: "Communities", state: p.targetsTotal && !p.targetsPending ? "done" : st?.status === "approved" ? "live" : "waiting", tab: "communities", hint: p.targetsTotal ? `${p.targetsGo} GO of ${p.targetsTotal}` : "—" },
     { letter: "E", label: "People", state: p.prospects ? "done" : p.targetsGo ? "live" : "waiting", tab: "people", hint: p.prospects ? `${p.prospects} found` : "—" },
-    { letter: "F", label: "Opener", state: p.contacted ? "done" : p.prospects ? "live" : "waiting", tab: "people", hint: p.contacted ? `${p.contacted} reached` : "—" },
+    { letter: "F", label: "Opener", state: p.contacted ? "done" : p.prospects ? (e.mode === "auto" ? "live" : "attention") : "waiting", tab: "people", hint: p.contacted ? `${p.contacted} reached` : "—" },
     { letter: "G", label: "Conversation", state: p.connectorReplies ? "done" : p.contacted ? "live" : "waiting", tab: "people", hint: p.connectorReplies ? `${p.connectorReplies} replies` : "—" },
     { letter: "H", label: "Parents", state: s.optIns ? "done" : p.contacted ? "live" : "waiting", tab: "parents", hint: s.optIns ? `${s.optIns} opted in` : "—" },
     { letter: "I", label: "Organizer", state: e.openFlags.length ? "attention" : s.steppedIn ? "done" : "waiting", tab: "parents", hint: e.openFlags.length ? `${e.openFlags.length} need you` : s.steppedIn ? `${s.steppedIn} answered` : "Only if needed" },
@@ -185,6 +197,15 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className="min-w-[220px] text-right">
+                    <div className="mb-2 inline-flex rounded-full border border-line bg-sand/60 p-0.5 text-xs font-semibold">
+                      {(["approve", "auto"] as const).map((m) => (
+                        <button key={m} disabled={busy === "mode"} onClick={() => act("mode", `/api/events/${e.id}/mode`, { mode: m })}
+                          className={`rounded-full px-3 py-1 ${e.mode === m ? "bg-ink text-cream" : "text-ink/70"}`}>
+                          {m === "approve" ? "I approve each step" : "Fully autonomous"}
+                        </button>
+                      ))}
+                    </div>
+                    <br />
                     <button
                       disabled={busy === "ap"}
                       onClick={() => act("ap", `/api/events/${e.id}/autopilot`, { on: !e.autopilot })}
@@ -192,7 +213,7 @@ export default function Dashboard() {
                       title={e.autopilot ? "Stop: SoldOut sends nothing until you turn it back on" : "Turn autopilot back on"}
                     >
                       <span className={`h-2 w-2 rounded-full ${e.autopilot ? "animate-pulse bg-mustard" : "bg-white"}`} />
-                      {e.autopilot ? "Autopilot on · Stop" : "Stopped · Resume autopilot"}
+                      {e.autopilot ? "Running · Stop" : "Stopped · Resume"}
                     </button>
                     <p className="text-3xl font-black tabular-nums">{s.paid}<span className="text-lg text-muted">/{e.goalSeats ?? "—"}</span></p>
                     <p className="text-xs text-muted">seats paid{left !== null ? ` · ${left} days left` : ""}</p>
@@ -307,7 +328,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </div>
-                      {e.strategy.status === "draft" && !e.autopilot && (
+                      {e.strategy.status === "draft" && (e.mode === "approve" || !e.autopilot) && (
                         <button disabled={busy === "a"} onClick={() => act("a", `/api/strategies/${e.strategy!.id}/approve`)} className="w-full rounded-xl bg-forest py-3.5 text-lg font-bold text-white hover:bg-clay disabled:opacity-50">
                           {busy === "a" ? "Approving…" : "Approve strategy and start research →"}
                         </button>

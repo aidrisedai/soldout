@@ -40,6 +40,7 @@ export async function GET() {
         pipeline: { targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount, connectorReplies },
         dateText: e.dateText,
         autopilot: e.autopilot,
+        mode: e.mode,
         openFlags: flags,
         awaitingPayment: ready,
         strategy: strategy ? { id: strategy.id, status: strategy.status, body: JSON.parse(strategy.body), createdAt: strategy.createdAt, approvedAt: strategy.approvedAt } : null,

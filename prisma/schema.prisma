@@ -27,7 +27,8 @@ model Event {
   fitQuestions    String // JSON: [{ key, question }]
   clips           String   @default("[]") // JSON: [{ id, title, url, answers }]
   accounts        String   @default("{}") // JSON: organizer accounts to act from { linkedin, instagram, email }
-  autopilot       Boolean  @default(true) // runs the whole flow on its own; false = stopped (nothing is sent)
+  autopilot       Boolean  @default(true) // running; false = stopped (nothing is sent)
+  mode            String   @default("approve") // approve = organizer approves strategy + first messages; auto = fully autonomous
   createdAt       DateTime @default(now())
 
   contacts      Contact[]

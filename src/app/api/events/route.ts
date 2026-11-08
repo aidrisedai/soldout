@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       content,
       fitQuestions: JSON.stringify(fit),
       clips: JSON.stringify(parseClipLines(s("clips"))),
+      mode: s("mode") === "auto" ? "auto" : "approve",
       accounts: JSON.stringify({ linkedin: s("acctLinkedin") || undefined, instagram: s("acctInstagram") || undefined, email: s("acctEmail") || undefined }),
     },
   });
