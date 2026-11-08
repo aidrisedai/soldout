@@ -14,7 +14,10 @@ const APP = process.env.APP_URL ?? "http://localhost:3000";
 async function forward(from: string, text: string, channel: string, externalId: string) {
   const res = await fetch(`${APP}/api/inbound`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(process.env.DASHBOARD_PASSWORD ? { authorization: `Basic ${Buffer.from(`worker:${process.env.DASHBOARD_PASSWORD}`).toString("base64")}` } : {}),
+    },
     body: JSON.stringify({ from, text, channel, externalId }),
   });
   const j = (await res.json().catch(() => ({}))) as { actions?: string[]; delivery?: string; error?: string };

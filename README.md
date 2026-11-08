@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoldOut
 
-## Getting Started
+Fill every seat of a paid program through the communities families already trust.
+The organizer sets a goal; SoldOut drafts the strategy, and once it's approved, talks to every
+parent who messages **JOIN** on WhatsApp, answering only from the organizer's own content,
+choosing text, video or a PDF brief per answer, flagging what only the organizer can answer,
+and sending the enrollment link when the parent is ready.
 
-First, run the development server:
+First customer: EdAI's Founder program (`content/edai-answer-pack.md`).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## How it works
+
+```
+/intake (goal + content) → strategy draft (diagnosis, policies + tests, who-next) → organizer approves
+   → parents message "JOIN <KEYWORD>" on WhatsApp (Mobilerun cloud phone)
+   → agent (Claude via Naive model proxy): fit questions → answers from content → video / PDF / text
+   → unknowns, refunds, installments → organizer (dashboard reply)
+   → apply link → paid → scoreboard
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Piece | Where |
+|---|---|
+| Agent + strategy + PDF brief writer | Claude Opus via **Naive** model proxy (`src/lib/llm.ts`) |
+| WhatsApp | Real WhatsApp app on a **Mobilerun** cloud phone, driven by `scripts/poll.ts` (`src/lib/waPhone.ts`) |
+| Videos / branded media | **Dot** (ChatGPT on the phone, connected to the organizer's Drive), via Mobilerun Agent tasks (`src/lib/dot.ts`) |
+| Org research for who-next | **Monid** (CLI), organizations only |
+| Data | SQLite via Prisma |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Rules the product follows: contact only people who messaged JOIN; never scrape numbers; personalize only from
+what the parent says; never invent facts, stats, quotes or testimonials; refunds/installments go to the organizer;
+Stripe links must be test-mode; the organizer approves the strategy before anyone is contacted.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy on Railway
 
-## Learn More
+1. railway.com → **New Project → Deploy from GitHub repo** → `aidrisedai/soldout`.
+2. Service → **Settings → Volumes → Add volume**, mount path **`/app/data`** (database, PDFs, media cache).
+3. Service → **Variables**:
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | `file:/app/data/soldout.db` |
+| `DASHBOARD_PASSWORD` | any password (protects dashboard, intake, simulate, APIs) |
+| `NAIVE_API_KEY` | Naive key (`sk_live_…`) |
+| `MOBILERUN_API_KEY` | Mobilerun key (`dr_sk_…`) |
+| `MOBILERUN_DEVICE_ID` | optional; first ready cloud phone otherwise |
+| `ORGANIZER_PHONE` | organizer's WhatsApp number, e.g. `+15153570454` |
+| `STRIPE_PAYMENT_LINK` | optional, **test-mode** link only |
+| `DOT_MAY_SHARE` | `1` only if the organizer allows Dot to make the Drive files it sends link-shareable (needed to send videos) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Settings → Networking → Generate Domain**. Open it: the landing page is public; everything else asks for the password.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`railway.json` builds with Railpack and starts `node scripts/start.mjs`, which syncs the DB schema and runs the
+web app **and** the WhatsApp worker in one service. Only run **one** worker per phone (stop any local `npm run worker`).
 
-## Deploy on Vercel
+## Run locally
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+cp .env.example .env   # fill in keys
+npm run setup          # create DB + seed the EdAI event (optional; npm run reset for a blank slate)
+npm run dev            # http://localhost:3000
+npm run worker         # second terminal: WhatsApp on the Mobilerun phone
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Demo flow (start to finish)
+
+1. `/` → **Start a campaign** → **Fill with EdAI example** → **Create event** (keyword `JOIN FOUNDER`).
+2. `/dashboard` → the strategy drafts itself (~30 s) → **Approve**.
+3. From a phone, WhatsApp `JOIN FOUNDER` to the SoldOut number → answer the fit questions.
+4. Ask "Can you send me something I can share with my husband?" → the PDF brief arrives as a file.
+5. Ask "Do you offer refunds?" → flagged → reply from the dashboard.
+6. "We're ready to sign up" → apply link → **Mark paid** → scoreboard updates.
+
+`/simulate` runs the same conversation without a phone.
