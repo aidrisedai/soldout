@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import MediaPanel from "./MediaPanel";
+import TargetsPanel from "./TargetsPanel";
 
 type Strategy = {
   id: string;
@@ -201,6 +202,7 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
+                <TargetsPanel eventId={e.id} approved={e.strategy?.status === "approved"} />
                 <MediaPanel eventId={e.id} />
               </section>
             );

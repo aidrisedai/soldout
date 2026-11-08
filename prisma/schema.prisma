@@ -172,3 +172,63 @@ model Brief {
   createdAt  DateTime  @default(now())
   approvedAt DateTime?
 }
+
+// ---- Outreach (docs/FLOW.md) ----
+
+// Organizer's own network for warm intros, and accounts to act from.
+model NetworkContact {
+  id           String   @id @default(cuid())
+  eventId      String
+  name         String
+  relationship String? // how the organizer knows them
+  community    String?
+  contact      String? // email / phone / profile URL
+  createdAt    DateTime @default(now())
+}
+
+// A community or organization a guiding policy points to. Researched, then GO / NO-GO.
+model Target {
+  id         String   @id @default(cuid())
+  eventId    String
+  strategyId String?
+  policy     String // which guiding policy it serves
+  name       String
+  kind       String   @default("community") // community | organization
+  research   String? // JSON: { summary, needs[], fit, howIn, sources[] }
+  fitScore   Int? // 0-100
+  decision   String   @default("pending") // pending | go | no_go
+  reason     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// A person in a GO community we may reach (connectors first).
+model Prospect {
+  id          String   @id @default(cuid())
+  eventId     String
+  targetId    String
+  name        String
+  role        String?
+  whyThem     String?
+  reach       String? // connector | member
+  channels    String   @default("{}") // JSON: { linkedin?, instagram?, email?, whatsapp? }
+  research    String? // JSON notes + sources
+  opener      String? // first message, in the organizer's voice
+  joinCode    String?  @unique
+  status      String   @default("found") // found | approved | contacted | replied | engaged | bought | referred | not_now | done
+  aiPaused    Boolean  @default(false) // human took over
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// One step on the channel ladder, or a message in a connector conversation.
+model Touch {
+  id         String   @id @default(cuid())
+  prospectId String
+  channel    String // linkedin | email | instagram | intro | whatsapp
+  direction  String // out | in
+  body       String
+  status     String   @default("draft") // draft | approved | sent | failed | received
+  error      String?
+  createdAt  DateTime @default(now())
+}
