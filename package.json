@@ -17,6 +17,7 @@
     "@mobilerun/sdk": "^6.1.0",
     "@prisma/client": "^6.19.3",
     "next": "15.5.29",
+    "pdfkit": "^0.20.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "^4.6.7"
@@ -25,6 +26,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

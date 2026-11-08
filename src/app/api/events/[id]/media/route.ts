@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { askDotForVideos } from "@/lib/dot";
+import { askDot, type DotJobKind } from "@/lib/dot";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,14 +12,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 // Ask Dot (ChatGPT on the Mobilerun phone) to find and share videos from Drive.
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const event = await db.event.findUnique({ where: { id } });
   if (!event) return NextResponse.json({ error: "event not found" }, { status: 404 });
   const running = await db.dotTask.findFirst({ where: { status: "running" } });
   if (running) return NextResponse.json({ error: "Dot is already working on a request" }, { status: 409 });
   try {
-    const jobId = await askDotForVideos(event);
+    const { kind } = (await req.json().catch(() => ({}))) as { kind?: DotJobKind };
+    const k: DotJobKind = kind === "make_pdf" || kind === "make_video" ? kind : "find_videos";
+    const jobId = await askDot(event, k);
     return NextResponse.json({ ok: true, jobId });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

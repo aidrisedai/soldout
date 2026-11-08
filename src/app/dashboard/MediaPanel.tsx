@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type Item = { id: string; title: string; url: string; answers: string; source: string; status: string };
-type Task = { status: string; message: string | null; createdAt: string } | null;
+type Item = { id: string; title: string; url: string; answers: string; source: string; kind: string; status: string };
+type Task = { status: string; kind: string; message: string | null; createdAt: string } | null;
 
 // Videos found by Dot on the organizer's Drive. Only approved ones reach parents.
 export default function MediaPanel({ eventId }: { eventId: string }) {
@@ -23,9 +23,9 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
     return () => clearInterval(t);
   }, [load]);
 
-  async function askDot() {
+  async function askDot(kind: string) {
     setError("");
-    const r = await fetch(`/api/events/${eventId}/media`, { method: "POST" });
+    const r = await fetch(`/api/events/${eventId}/media`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind }) });
     const j = await r.json();
     if (!r.ok) setError(j.error);
     load();
@@ -39,12 +39,15 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
   return (
     <div className="mt-6 rounded-lg border p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold">Videos for parents</h3>
-        <button onClick={askDot} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-zinc-50 disabled:opacity-50">
-          {running ? "Dot is searching Drive…" : "Ask Dot for videos"}
-        </button>
+        <h3 className="font-semibold">Videos & PDFs for parents</h3>
+        <div className="flex flex-wrap gap-1">
+          {[["find_videos", "Find videos"], ["make_pdf", "Make branded PDF"], ["make_video", "Make parent video"]].map(([k, label]) => (
+            <button key={k} onClick={() => askDot(k)} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-zinc-50 disabled:opacity-50">{label}</button>
+          ))}
+        </div>
       </div>
-      <p className="mb-2 text-xs text-zinc-500">Dot (ChatGPT on the Mobilerun phone) picks and shares videos from your Drive. The agent only sends the ones you approve.</p>
+      <p className="mb-2 text-xs text-zinc-500">Dot (ChatGPT on the Mobilerun phone, connected to your Drive and brand files) finds or makes media. The agent only sends what you approve.</p>
+      {running && <p className="mb-2 text-sm text-amber-700">Dot is working ({task?.kind.replace("_", " ")})… WhatsApp replies pause until it’s done.</p>}
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {task?.status === "failed" && <p className="text-sm text-rose-700">Dot couldn’t finish: {task.message}</p>}
       <ul className="space-y-2">
@@ -52,7 +55,7 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-50 p-2 text-sm">
             <div className="min-w-0">
               <a href={m.url} target="_blank" rel="noreferrer" className="font-medium underline">{m.title}</a>
-              <div className="text-xs text-zinc-500">Answers: {m.answers} · from {m.source}</div>
+              <div className="text-xs text-zinc-500">{m.kind === "pdf" ? "PDF" : "Video"} · {m.answers} · from {m.source}</div>
             </div>
             {m.status === "proposed" ? (
               <div className="flex gap-1">

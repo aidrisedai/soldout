@@ -67,6 +67,7 @@ model Message {
   channel    String // simulate | sms | telegram | whatsapp
   status     String   @default("ok") // ok | queued | sent | failed | not_sendable
   externalId String?  @unique // Mobilerun message id
+  attachment String? // local file path (e.g. brief PDF) to send with this message
   error      String?
   createdAt  DateTime @default(now())
 
@@ -145,6 +146,7 @@ model MediaItem {
   url       String
   answers   String // which parent question it answers
   source    String // dot | naive_clip | organizer
+  kind      String   @default("video") // video | pdf
   status    String   @default("proposed") // proposed | approved | rejected
   createdAt DateTime @default(now())
 }
@@ -153,8 +155,20 @@ model DotTask {
   id        String   @id @default(cuid())
   eventId   String
   taskId    String? // Mobilerun task id
+  kind      String   @default("find_videos") // find_videos | make_pdf | make_video
   status    String   @default("running") // running | done | failed
   message   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// One-page program brief PDF per event, drafted only from the organizer's content.
+model Brief {
+  id         String    @id @default(cuid())
+  eventId    String
+  body       String // JSON: { title, tagline, sections[], howToApply }
+  pdfPath    String
+  status     String    @default("draft") // draft | approved
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
 }

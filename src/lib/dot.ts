@@ -22,61 +22,103 @@ export async function deviceLocked(): Promise<boolean> {
   return !!kv && Number(kv.value) > Date.now();
 }
 
+export type DotJobKind = "find_videos" | "make_pdf" | "make_video";
+
 const OUTPUT_SCHEMA = {
   type: "object",
   properties: {
-    videos: {
+    items: {
       type: "array",
       items: {
         type: "object",
         properties: {
           title: { type: "string" },
-          url: { type: "string", description: "The shareable Google Drive link Dot returned" },
-          answers: { type: "string", description: "Which parent question this video answers" },
+          url: { type: "string", description: "The Google Drive link Dot returned" },
+          answers: { type: "string", description: "Which parent question it answers / what it covers" },
         },
         required: ["title", "url", "answers"],
       },
     },
     dotReply: { type: "string", description: "Dot's full reply text, verbatim" },
   },
-  required: ["videos", "dotReply"],
+  required: ["items", "dotReply"],
 };
 
-function dotPrompt(event: Event): string {
+// Facts Dot must stay within. Dot also has the organizer's Drive and brand files.
+function factSheet(e: Event): string {
   return [
-    `From my ${event.organization} Google Drive, pick up to 5 finished, edited videos (not raw camera footage) that would help ${event.audience ?? "parents"} decide about "${event.name}".`,
-    `Useful topics: what ${event.organization} is, what students build, who the mentors are, what a session or demo day looks like.`,
-    `Skip any video where it isn't clear we can share it publicly.`,
-    `For each one, set sharing to "Anyone with the link can view" and reply with one line per video in this exact format:`,
-    `Title | share link | the parent question it answers`,
-  ].join(" ");
+    `Program: ${e.name} by ${e.organization}, taught by ${e.organizerName}.`,
+    e.dateText && `When: ${e.dateText}.`,
+    e.place && `Format: ${e.place}.`,
+    e.audience && `For: ${e.audience}.`,
+    e.price && `Tuition: ${e.price}.`,
+    e.applyLink && `Apply: ${e.applyLink}.`,
+  ].filter(Boolean).join(" ");
 }
 
-export async function askDotForVideos(event: Event): Promise<string> {
+const RULES =
+  "Rules: use only facts from the fact sheet and our own program documents; leave out anything unconfirmed; " +
+  "never mention installments, payment plans, refunds, discounts or scholarships; no invented quotes, stats, testimonials or outcomes; " +
+  "don't feature a student's face or name unless our files say we may share it.";
+
+// Read-only by default. Set DOT_MAY_SHARE=1 only after the organizer explicitly allows Dot to change Drive sharing.
+function sharing(): string {
+  return process.env.DOT_MAY_SHARE === "1"
+    ? `Set sharing on the result to "Anyone with the link can view".`
+    : `Do NOT change any sharing settings.`;
+}
+
+function dotPrompt(event: Event, kind: DotJobKind): string {
+  const reply = "Reply with one line per item in this exact format: Title | Google Drive link | the parent question it answers";
+  switch (kind) {
+    case "find_videos":
+      return [
+        `From my ${event.organization} Google Drive, find up to 5 finished, edited videos (not raw camera footage) that would help ${event.audience ?? "parents"} decide about "${event.name}".`,
+        `Useful topics: what ${event.organization} is, what students build, who the mentors are, what a session or demo day looks like.`,
+        sharing(), reply,
+      ].join(" ");
+    case "make_pdf":
+      return [
+        `Using our NEW ${event.organization} brand files in Drive (logo, colors, fonts), create a polished one-page parent brief as a PDF for "${event.name}".`,
+        `Cover: who it is for, what students do, schedule and format, who teaches, tuition, how to apply.`,
+        `Fact sheet: ${factSheet(event)}`, RULES,
+        `Save the PDF in a Google Drive folder named "SoldOut".`, sharing(), reply,
+      ].join(" ");
+    case "make_video":
+      return [
+        `Using our NEW ${event.organization} brand files and our finished videos in Drive, create one 30 to 60 second vertical (9:16) video for parents about "${event.name}": a hook, what students do, schedule, and how to apply.`,
+        `Fact sheet: ${factSheet(event)}`, RULES,
+        `Save the MP4 in a Google Drive folder named "SoldOut". If you cannot produce a video file, say exactly why.`, sharing(), reply,
+      ].join(" ");
+  }
+}
+
+export async function askDot(event: Event, kind: DotJobKind): Promise<string> {
   const ctx = await phoneCtx();
   if (!ctx) throw new Error("No ready Mobilerun phone");
-  const job = await db.dotTask.create({ data: { eventId: event.id } });
-  void runDot(ctx.mr, ctx.deviceId, event, job.id).catch(async (e) => {
+  const job = await db.dotTask.create({ data: { eventId: event.id, kind } });
+  void runDot(ctx.mr, ctx.deviceId, event, kind, job.id).catch(async (e) => {
     await db.dotTask.update({ where: { id: job.id }, data: { status: "failed", message: (e as Error).message } });
     await unlockDevice();
   });
   return job.id;
 }
 
-async function runDot(mr: Mobilerun, deviceId: string, event: Event, jobId: string) {
-  await lockDevice(20 * 60_000);
+async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJobKind, jobId: string) {
+  const long = kind !== "find_videos";
+  await lockDevice((long ? 45 : 20) * 60_000);
   await new Promise((r) => setTimeout(r, 4000)); // let the WhatsApp worker finish its current step
 
   const task = [
     `Open the ChatGPT app (package com.openai.chatgpt). Start a NEW chat.`,
     `Type this message exactly and send it:`,
-    `"""${dotPrompt(event)}"""`,
-    `Wait until ChatGPT has completely finished replying (it may use Google Drive and take a few minutes; if it asks to confirm a Drive action, confirm it).`,
+    `"""${dotPrompt(event, kind)}"""`,
+    `Wait until ChatGPT has completely finished replying (it may use Google Drive and take several minutes; if it asks to confirm a Drive action that does not change sharing, confirm it).`,
     `Then read the whole reply, scrolling if needed, and return it. Do not open any links and do not do anything else.`,
   ].join("\n");
 
   const created = (await mr.post("/tasks", {
-    body: { task, deviceId, outputSchema: OUTPUT_SCHEMA, maxSteps: 60, executionTimeout: 900 },
+    body: { task, deviceId, outputSchema: OUTPUT_SCHEMA, maxSteps: long ? 90 : 60, executionTimeout: long ? 2400 : 900 },
   })) as { id: string };
   await db.dotTask.update({ where: { id: jobId }, data: { taskId: created.id } });
 
@@ -86,17 +128,19 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, jobId: stri
       status: string;
       succeeded: boolean | null;
       message: string | null;
-      output: { videos?: { title: string; url: string; answers: string }[]; dotReply?: string } | null;
+      output: { items?: { title: string; url: string; answers: string }[]; dotReply?: string } | null;
     };
     if (!["completed", "failed", "cancelled"].includes(st.status)) continue;
 
-    const videos = (st.output?.videos ?? []).filter((v) => /^https?:\/\//.test(v.url));
-    for (const v of videos) {
-      await db.mediaItem.create({ data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot" } });
+    const items = (st.output?.items ?? []).filter((v) => /^https?:\/\//.test(v.url));
+    for (const v of items) {
+      await db.mediaItem.create({
+        data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: kind === "make_pdf" ? "pdf" : "video" },
+      });
     }
     await db.dotTask.update({
       where: { id: jobId },
-      data: { status: st.succeeded ? "done" : "failed", message: st.output?.dotReply ?? st.message ?? st.status },
+      data: { status: st.succeeded && items.length ? "done" : "failed", message: st.output?.dotReply ?? st.message ?? st.status },
     });
     break;
   }
