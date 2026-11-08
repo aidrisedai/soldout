@@ -17,7 +17,8 @@ export async function sendOn(channel: string, to: string, body: string, idempote
     case "telegram":
       return sendTelegram(to, body);
     case "whatsapp":
-      return sendWhatsApp(to, body);
+      // Cloud API if configured; otherwise the Mobilerun phone worker (npm run poll) sends it.
+      return process.env.WHATSAPP_TOKEN ? sendWhatsApp(to, body) : { ok: true, status: "queued" };
   }
   return { ok: false, status: "not_sendable", error: `unknown channel ${channel}` };
 }

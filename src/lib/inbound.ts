@@ -121,6 +121,8 @@ export async function deliver(event: Event, contact: Contact, body: string) {
 }
 
 async function deliverUnscoped(phone: string, body: string, channel: Channel): Promise<InboundResult> {
+  // The WhatsApp phone may hold unrelated chats: never message anyone who hasn't texted JOIN.
+  if (channel === "whatsapp") return { ok: true, replies: [], actions: ["ignored_not_opted_in"] };
   if (channel !== "simulate") {
     const sent = await sendOn(channel, phone, body, `unscoped-${phone}-${Date.now()}`);
     return { ok: true, replies: [body], actions: ["no_event"], delivery: sent.ok ? sent.status : `not_sent: ${sent.error}` };

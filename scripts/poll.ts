@@ -2,7 +2,10 @@
 // and forwards them to /api/inbound. Run next to `npm run dev`:  npm run poll
 //   - Telegram: getUpdates long polling (needs TELEGRAM_BOT_TOKEN)
 //   - Mobilerun SMS inbox (needs MOBILERUN_API_KEY)
+//   - WhatsApp on the Mobilerun cloud phone: sends queued replies, reads unread chats
 import Mobilerun from "@mobilerun/sdk";
+import { PrismaClient } from "@prisma/client";
+import { phoneCtx, readUnread, sendViaPhone } from "../src/lib/waPhone";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 
@@ -60,10 +63,45 @@ async function mobilerunLoop(apiKey: string) {
   }
 }
 
+// WhatsApp on the Mobilerun cloud phone: one loop owns the device, so sends and reads never collide.
+async function whatsappPhoneLoop() {
+  const ctx = await phoneCtx();
+  if (!ctx) return console.log("[whatsapp] no ready Mobilerun phone");
+  const db = new PrismaClient();
+  console.log(`[whatsapp] driving WhatsApp on device ${ctx.deviceId}`);
+  const seen = new Set<string>();
+  for (;;) {
+    try {
+      const queued = await db.message.findMany({
+        where: { channel: "whatsapp", direction: "out", status: "queued" },
+        orderBy: { createdAt: "asc" },
+        take: 5,
+        include: { contact: { select: { phone: true } } },
+      });
+      for (const m of queued) {
+        const r = await sendViaPhone(ctx, m.contact.phone, m.body);
+        await db.message.update({ where: { id: m.id }, data: r.ok ? { status: "sent" } : { status: "failed", error: r.error } });
+        console.log(`[whatsapp] → ${m.contact.phone}: ${r.ok ? "sent" : r.error}`);
+      }
+      if (process.env.WHATSAPP_READ !== "0") {
+        for (const chat of await readUnread(ctx)) {
+          if (seen.has(chat.key)) continue;
+          seen.add(chat.key);
+          await forward(`wa:${chat.phone}`, chat.texts.join("\n"), "whatsapp", `wa-phone:${chat.key}`);
+        }
+      }
+    } catch (e) {
+      console.error("[whatsapp]", (e as Error).message);
+    }
+    await sleep(3000);
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const loops: Promise<unknown>[] = [];
 if (process.env.TELEGRAM_BOT_TOKEN) loops.push(telegramLoop(process.env.TELEGRAM_BOT_TOKEN));
 if (process.env.MOBILERUN_API_KEY) loops.push(mobilerunLoop(process.env.MOBILERUN_API_KEY));
+if (process.env.MOBILERUN_API_KEY && process.env.WHATSAPP_VIA !== "cloud") loops.push(whatsappPhoneLoop());
 if (!loops.length) console.log("Nothing to poll: set TELEGRAM_BOT_TOKEN and/or MOBILERUN_API_KEY in .env");
 Promise.all(loops).catch((e) => { console.error(e); process.exit(1); });
