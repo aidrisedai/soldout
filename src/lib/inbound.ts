@@ -2,13 +2,13 @@ import type { Contact, Event } from "@prisma/client";
 import { db } from "./db";
 import { runAgent } from "./agent";
 import { isStop, normalizePhone, parseJoin } from "./event";
-import { sendSms } from "./mobilerun";
+import { sendOn, type Channel } from "./channels";
 
 export type InboundInput = {
   from: string;
   text: string;
   eventId?: string;
-  channel?: "simulate" | "sms";
+  channel?: Channel;
   externalId?: string; // Mobilerun message id, for dedupe
 };
 
@@ -108,11 +108,11 @@ async function findContact(phone: string, eventId?: string): Promise<Contact | n
 
 async function deliver(event: Event, contact: Contact, body: string) {
   const msg = await db.message.create({
-    data: { eventId: event.id, contactId: contact.id, direction: "out", body, channel: contact.channel, status: contact.channel === "sms" ? "queued" : "ok" },
+    data: { eventId: event.id, contactId: contact.id, direction: "out", body, channel: contact.channel, status: contact.channel === "simulate" ? "ok" : "queued" },
   });
   await db.contact.update({ where: { id: contact.id }, data: { updatedAt: new Date() } });
-  if (contact.channel !== "sms") return { body, status: "ok" };
-  const sent = await sendSms(contact.phone, body, msg.id);
+  if (contact.channel === "simulate") return { body, status: "ok" };
+  const sent = await sendOn(contact.channel, contact.phone, body, msg.id);
   await db.message.update({
     where: { id: msg.id },
     data: sent.ok ? { status: sent.status, externalId: sent.externalId } : { status: sent.status, error: sent.error },
@@ -120,9 +120,9 @@ async function deliver(event: Event, contact: Contact, body: string) {
   return { body, status: sent.ok ? sent.status : `not_sent: ${sent.error}` };
 }
 
-async function deliverUnscoped(phone: string, body: string, channel: string): Promise<InboundResult> {
-  if (channel === "sms") {
-    const sent = await sendSms(phone, body, `unscoped-${phone}-${Date.now()}`);
+async function deliverUnscoped(phone: string, body: string, channel: Channel): Promise<InboundResult> {
+  if (channel !== "simulate") {
+    const sent = await sendOn(channel, phone, body, `unscoped-${phone}-${Date.now()}`);
     return { ok: true, replies: [body], actions: ["no_event"], delivery: sent.ok ? sent.status : `not_sent: ${sent.error}` };
   }
   return { ok: true, replies: [body], actions: ["no_event"] };

@@ -21,7 +21,8 @@ export function isStop(text: string): boolean {
 
 export function normalizePhone(p: string): string {
   const t = p.trim();
-  if (/^sim[-:]/i.test(t)) return t.toLowerCase();
+  if (/^(sim[-:]|tg:)/i.test(t)) return t.toLowerCase();
+  if (/^wa:/i.test(t)) return `wa:+${t.replace(/[^\d]/g, "")}`;
   const digits = t.replace(/[^\d+]/g, "");
   if (/^\d{10}$/.test(digits)) return `+1${digits}`;
   if (/^1\d{10}$/.test(digits)) return `+${digits}`;

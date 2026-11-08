@@ -41,7 +41,7 @@ model Contact {
   id         String    @id @default(cuid())
   eventId    String
   phone      String
-  channel    String    @default("simulate") // simulate | sms
+  channel    String    @default("simulate") // simulate | sms | telegram | whatsapp
   status     String    @default("active") // active | opted_out
   stage      String    @default("fit") // fit | qa | link_sent | paid | builder
   program    String? // founder | builder
@@ -64,7 +64,7 @@ model Message {
   contactId  String
   direction  String // in | out
   body       String
-  channel    String // simulate | sms
+  channel    String // simulate | sms | telegram | whatsapp
   status     String   @default("ok") // ok | queued | sent | failed | not_sendable
   externalId String?  @unique // Mobilerun message id
   error      String?
