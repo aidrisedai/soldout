@@ -107,7 +107,10 @@ export async function askDot(event: Event, kind: DotJobKind, opts: { ask?: strin
   if (!ctx) throw new Error("No ready Mobilerun phone");
   const job = await db.dotTask.create({ data: { eventId: event.id, kind } });
   void runDot(ctx.mr, ctx.deviceId, event, kind, job.id, opts).catch(async (e) => {
-    if (opts.replyTo) await deliver(event, opts.replyTo, `Dot couldn't finish that: ${(e as Error).message}`).catch(() => {});
+    if (opts.replyTo)
+      await deliver(event, opts.replyTo, kind === "find_for_parent" ? "Sorry, I couldn't pull up that video just now. I'll send it to you a bit later." : `Dot couldn't finish that: ${(e as Error).message}`).catch(() => {});
+    if (opts.replyTo && kind === "find_for_parent")
+      await db.organizerFlag.create({ data: { eventId: event.id, contactId: opts.replyTo.id, question: `Video wanted: ${opts.ask ?? ""}`.slice(0, 500), reason: "The video search failed. Please send this parent a video yourself." } }).catch(() => {});
     await db.dotTask.update({ where: { id: job.id }, data: { status: "failed", message: (e as Error).message } });
     await unlockDevice();
   });
@@ -162,7 +165,8 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJo
         await db.mediaItem.create({ data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: "video", status: "approved" } });
         await deliver(event, opts.replyTo, `Here's the video I mentioned: ${v.title}`, `drive:${fileId}|${v.title}`);
       } else {
-        await deliver(event, opts.replyTo, `Sorry, I couldn't find a good video for that yet. ${event.organizerName} can share one with you.`);
+        await deliver(event, opts.replyTo, "Sorry, I couldn't find a good video for that just now. I'll send you one a bit later.");
+        await db.organizerFlag.create({ data: { eventId: event.id, contactId: opts.replyTo.id, question: `Video wanted: ${opts.ask ?? ""}`.slice(0, 500), reason: "No matching video found in Drive. Please send this parent a video yourself." } }).catch(() => {});
       }
     } else if (opts.replyTo) {
       await deliver(event, opts.replyTo, ok ? `Dot: ${reply}`.slice(0, 1500) : `Dot couldn't finish that (${st.status}).`);

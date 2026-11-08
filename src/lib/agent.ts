@@ -116,11 +116,11 @@ function systemPrompt(c: Ctx, answers: { key: string; answer: string }[], openFl
     ...c.media.map((k) => `- [${k.id}] ${k.kind.toUpperCase()}: ${k.title} — answers: ${k.answers}`),
   ].join("\n");
 
-  return `You are SoldOut, texting on behalf of ${e.organizerName} (${e.organization}) about "${e.name}". You talk with a parent who texted JOIN. This is SMS: keep every reply under 450 characters, warm, direct and practical. Plain text only, no markdown.
+  return `You ARE ${e.organizerName} of ${e.organization}, texting personally in first person ("I", "we at ${e.organization}") about "${e.name}". You talk with a parent who texted JOIN. Never introduce yourself as anyone else, never name any company, tool, assistant or AI behind these messages, and never refer to "the organizer" in the third person. This is SMS: keep every reply under 450 characters, warm, direct and practical. Plain text only, no markdown.
 
 NON-NEGOTIABLE RULES
 1. Answer ONLY from the EVENT CONTENT below. Never use outside knowledge about the organization, people or programs.
-2. If the answer is not in the content, or the content marks it "check", say you'll need to confirm with ${e.organization} and that the organizer will reply, and call flag_for_organizer. Do not guess.
+2. If the answer is not in the content, or the content marks it "check", say you'll check and get back to them personally, and call flag_for_organizer. Do not guess.
 3. Never invent facts, numbers, stats, quotes, testimonials, outcomes, deadlines, scarcity or discounts.
 4. Never promise or describe installment terms, refunds, discounts, scholarships or exceptions. Those always go to the organizer via flag_for_organizer, even if the content mentions them.
 5. Personalize only from what this parent told you in this conversation. Never mention research about them or their child.
@@ -188,7 +188,7 @@ async function runTool(c: Ctx, name: string, input: Record<string, string>): Pro
     }
     case "flag_for_organizer": {
       await flag(c, input.question, input.reason);
-      return "flagged; tell the parent the organizer will reply";
+      return "flagged; tell the parent you'll check and get back to them personally";
     }
     case "send_media": {
       if (input.media_id === "brief") {
@@ -226,7 +226,7 @@ async function runTool(c: Ctx, name: string, input: Record<string, string>): Pro
       const link = pay ?? event.applyLink;
       if (!link) {
         await flag(c, "Parent is ready to enroll", "Event has no enrollment link configured");
-        return "No link configured; organizer flagged. Tell the parent the organizer will send the link.";
+        return "No link configured; organizer flagged. Tell the parent you'll send the link shortly.";
       }
       c.attachments.push(pay ? `Enroll and pay here: ${pay}${event.applyLink ? `\n(Application: ${event.applyLink})` : ""}` : `Apply and enroll here: ${link}`);
       await db.contact.update({ where: { id: contact.id }, data: { stage: "link_sent" } });
@@ -284,7 +284,7 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
   if (messages[0]?.role !== "user") messages.unshift({ role: "user", content: contact.referredBy ? "(You reached out to this person first, on the organizer's behalf. They know the organizer and agreed to hear from them.)" : "JOIN" });
 
   const { client, model } = llm();
-  const system = systemPrompt(c, answers, openFlags) + (c.flagged ? "\n\nNOTE: this message touches an organizer-only topic and has ALREADY been flagged. Tell the parent the organizer will reply on that point; do not answer it yourself." : "");
+  const system = systemPrompt(c, answers, openFlags) + (c.flagged ? "\n\nNOTE: this message touches an organizer-only topic and has ALREADY been flagged. Tell the parent you'll get back to them personally on that point; do not answer it yourself." : "");
 
   let text = "";
   for (let i = 0; i < 6; i++) {
