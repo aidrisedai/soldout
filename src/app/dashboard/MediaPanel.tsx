@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 type Item = { id: string; title: string; url: string; answers: string; source: string; kind: string; status: string };
 type Task = { status: string; kind: string; message: string | null; createdAt: string } | null;
 
-// Videos found by Dot on the organizer's Drive. Only approved ones reach parents.
+// Videos and PDFs from the organizer's Drive.
 export default function MediaPanel({ eventId }: { eventId: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [task, setTask] = useState<Task>(null);
@@ -46,24 +46,29 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
           ))}
         </div>
       </div>
-      <p className="mb-2 text-xs text-zinc-500">Dot (ChatGPT on the Mobilerun phone, connected to your Drive and brand files) finds or makes media. The agent only sends what you approve.</p>
-      {running && <p className="mb-2 text-sm text-amber-700">Dot is working ({task?.kind.replace("_", " ")})… WhatsApp replies pause until it’s done.</p>}
+      <p className="mb-2 text-xs text-zinc-500">SoldOut finds the right videos in your Drive and sends them to parents when they help. Reject anything you don’t want used.</p>
+      {running && <p className="mb-2 text-sm text-amber-700">Searching your Drive… WhatsApp replies pause for a minute or two.</p>}
       {error && <p className="text-sm text-rose-700">{error}</p>}
-      {task?.status === "failed" && <p className="text-sm text-rose-700">Dot couldn’t finish: {task.message}</p>}
+      {task?.status === "failed" && <p className="text-sm text-rose-700">The last media request didn’t finish. Try again.</p>}
       <ul className="space-y-2">
         {items.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-50 p-2 text-sm">
             <div className="min-w-0">
               <a href={m.url} target="_blank" rel="noreferrer" className="font-medium underline">{m.title}</a>
-              <div className="text-xs text-zinc-500">{m.kind === "pdf" ? "PDF" : "Video"} · {m.answers} · from {m.source}</div>
+              <div className="text-xs text-zinc-500">{m.kind === "pdf" ? "PDF" : "Video"} · {m.answers} · from your Drive</div>
             </div>
             {m.status === "proposed" ? (
               <div className="flex gap-1">
                 <button onClick={() => decide(m.id, "approved")} className="rounded bg-emerald-600 px-2 py-0.5 text-white">Approve</button>
                 <button onClick={() => decide(m.id, "rejected")} className="rounded border px-2 py-0.5">Reject</button>
               </div>
+            ) : m.status === "approved" ? (
+              <div className="flex items-center gap-1">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">in use</span>
+                <button onClick={() => decide(m.id, "rejected")} className="rounded border px-2 py-0.5 text-xs">Don’t use</button>
+              </div>
             ) : (
-              <span className={`rounded-full px-2 py-0.5 text-xs ${m.status === "approved" ? "bg-emerald-100 text-emerald-800" : "bg-zinc-200"}`}>{m.status}</span>
+              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs">not used</span>
             )}
           </li>
         ))}

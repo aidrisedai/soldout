@@ -5,7 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 
 // Resolve a message attachment ref to a local file the phone worker can upload.
 //   brief:<briefId>          SoldOut's PDF brief
-//   drive:<fileId>|<title>   a Drive file Dot picked (must be link-shareable to download)
+//   drive:<fileId>|<title>   a Drive file picked for the parent (must be link-shareable to download)
 export async function resolveAttachment(db: PrismaClient, ref: string): Promise<{ path: string; fileName: string }> {
   const safe = (s: string) => s.replace(/[^A-Za-z0-9 ._-]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "file";
   if (ref.startsWith("brief:")) {
@@ -25,7 +25,7 @@ export async function resolveAttachment(db: PrismaClient, ref: string): Promise<
     const res = await fetch(`https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`);
     const type = res.headers.get("content-type") ?? "";
     if (!res.ok || type.includes("text/html")) {
-      throw new Error("Drive file isn't link-shareable, so it can't be downloaded (set DOT_MAY_SHARE=1 so Dot shares what it picks)");
+      throw new Error("Drive file isn't link-shareable, so it can't be downloaded (set DOT_MAY_SHARE=1 to allow sharing what gets sent)");
     }
     const ext = type.includes("pdf") ? ".pdf" : type.includes("quicktime") ? ".mov" : ".mp4";
     const p = join(dir, `${fileId}${ext}`);

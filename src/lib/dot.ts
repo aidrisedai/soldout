@@ -146,7 +146,8 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJo
     const items = (st.output?.items ?? []).filter((v) => /^https?:\/\//.test(v.url));
     for (const v of kind === "ask" || kind === "find_for_parent" ? [] : items) {
       await db.mediaItem.create({
-        data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: kind === "make_pdf" ? "pdf" : "video" },
+        // The organizer chose fully automatic media: found items are usable right away (they can still reject).
+        data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: kind === "make_pdf" ? "pdf" : "video", status: "approved" },
       });
     }
     const reply = st.output?.dotReply ?? st.message ?? st.status;
@@ -171,7 +172,7 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJo
   await unlockDevice();
 }
 
-// Approved media becomes the event's clip list, which the agent can send.
+// (kept for compatibility) Approved media becomes the event's clip list, which the agent can send.
 export async function syncApprovedClips(eventId: string) {
   const items = await db.mediaItem.findMany({ where: { eventId, status: "approved" }, orderBy: { createdAt: "asc" } });
   const clips = items.map((m, i) => ({ id: `clip${i + 1}`, title: m.title, url: m.url, answers: m.answers }));

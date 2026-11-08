@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { draftFitQuestions, parseClipLines, parseFitLines, uniqueKeyword } from "@/lib/intake";
 import { draftStrategy } from "@/lib/strategy";
+import { askDot } from "@/lib/dot";
 
 export const maxDuration = 120;
 
@@ -60,5 +61,9 @@ export async function POST(req: Request) {
   void draftStrategy(event)
     .then((body) => db.strategy.create({ data: { eventId: event.id, body: JSON.stringify(body) } }))
     .catch((e) => console.error("[strategy] auto-draft failed:", (e as Error).message));
+  // ...and build the video library from the organizer's Drive in the background.
+  if (process.env.MOBILERUN_API_KEY && process.env.AUTO_MEDIA !== "0") {
+    void askDot(event, "find_videos").catch((e) => console.error("[media] auto-find failed:", (e as Error).message));
+  }
   return NextResponse.json({ id: event.id, keyword: event.keyword, fitQuestions: fit, skipped });
 }

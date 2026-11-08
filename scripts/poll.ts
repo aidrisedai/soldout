@@ -78,7 +78,7 @@ async function whatsappPhoneLoop() {
   let paused = false;
   for (;;) {
     if (await deviceLocked()) {
-      if (!paused) console.log("[whatsapp] paused: Dot is using the phone");
+      if (!paused) console.log("[whatsapp] paused: a media task is using the phone");
       paused = true;
       await sleep(5000);
       continue;

@@ -85,7 +85,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "request_video",
     description:
-      "When a video would help but nothing in the media library fits, ask Dot (the organizer's assistant with access to their Drive) to find one. It arrives as a follow-up in a few minutes. Tell the parent it's coming.",
+      "When a video would help but nothing in the media library fits, search the organizer's Drive for one. It arrives as a follow-up in a few minutes. Tell the parent it's coming.",
     input_schema: {
       type: "object",
       properties: { need: { type: "string", description: "What the video should show, in the parent's terms" } },
@@ -210,11 +210,11 @@ async function runTool(c: Ctx, name: string, input: Record<string, string>): Pro
       return "the video file will be sent right after your text";
     }
     case "request_video": {
-      if (contact.channel !== "whatsapp") return "Dot can only deliver on WhatsApp; answer in text for now.";
+      if (contact.channel !== "whatsapp") return "Videos can only be delivered on WhatsApp; answer in text for now.";
       const { askDot } = await import("./dot");
       await askDot(event, "find_for_parent", { ask: input.need, replyTo: contact });
-      c.actions.push("dot_video_requested");
-      return "Dot is finding a video; it will be sent automatically in a few minutes. Tell the parent.";
+      c.actions.push("video_requested");
+      return "A video is being found; it will be sent automatically in a few minutes. Tell the parent briefly, without naming any tool or assistant.";
     }
     case "send_enroll_link": {
       const answers = await db.fitAnswer.findMany({ where: { contactId: contact.id } });

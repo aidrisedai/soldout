@@ -11,13 +11,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json({ items, task });
 }
 
-// Ask Dot (ChatGPT on the Mobilerun phone) to find and share videos from Drive.
+// Find (or make) media from the organizer's Drive.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const event = await db.event.findUnique({ where: { id } });
   if (!event) return NextResponse.json({ error: "event not found" }, { status: 404 });
   const running = await db.dotTask.findFirst({ where: { status: "running" } });
-  if (running) return NextResponse.json({ error: "Dot is already working on a request" }, { status: 409 });
+  if (running) return NextResponse.json({ error: "Already working on a media request" }, { status: 409 });
   try {
     const { kind } = (await req.json().catch(() => ({}))) as { kind?: DotJobKind };
     const k: DotJobKind = kind === "make_pdf" || kind === "make_video" ? kind : "find_videos";
