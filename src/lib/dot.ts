@@ -23,7 +23,7 @@ export async function deviceLocked(): Promise<boolean> {
   return !!kv && Number(kv.value) > Date.now();
 }
 
-export type DotJobKind = "find_videos" | "make_pdf" | "make_video" | "ask";
+export type DotJobKind = "find_videos" | "make_pdf" | "make_video" | "ask" | "find_for_parent";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -74,6 +74,12 @@ function dotPrompt(event: Event, kind: DotJobKind, ask?: string): string {
   switch (kind) {
     case "ask":
       return `${ask} (Answer briefly, under 120 words. Write any links as full URLs in plain text. ${sharing()})`;
+    case "find_for_parent":
+      return [
+        `From my ${event.organization} Google Drive, find the ONE best finished, edited video (not raw footage) showing: ${ask}.`,
+        `It is for a parent considering "${event.name}". Only pick a video we can share publicly.`,
+        sharing(), reply,
+      ].join(" ");
     case "find_videos":
       return [
         `From my ${event.organization} Google Drive, find up to 5 finished, edited videos (not raw camera footage) that would help ${event.audience ?? "parents"} decide about "${event.name}".`,
@@ -138,16 +144,28 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJo
     if (!["completed", "failed", "cancelled"].includes(st.status)) continue;
 
     const items = (st.output?.items ?? []).filter((v) => /^https?:\/\//.test(v.url));
-    for (const v of kind === "ask" ? [] : items) {
+    for (const v of kind === "ask" || kind === "find_for_parent" ? [] : items) {
       await db.mediaItem.create({
         data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: kind === "make_pdf" ? "pdf" : "video" },
       });
     }
     const reply = st.output?.dotReply ?? st.message ?? st.status;
     const ok = kind === "ask" ? !!st.succeeded && !!st.output?.dotReply : !!st.succeeded && items.length > 0;
+    // (find_for_parent results are saved below, already approved: the organizer chose fully automatic media.)
     await db.dotTask.update({ where: { id: jobId }, data: { status: ok ? "done" : "failed", message: reply } });
     await unlockDevice();
-    if (opts.replyTo) await deliver(event, opts.replyTo, ok ? `Dot: ${reply}`.slice(0, 1500) : `Dot couldn't finish that (${st.status}).`);
+    if (opts.replyTo && kind === "find_for_parent") {
+      const v = items[0];
+      const fileId = v?.url.match(/\/d\/([\w-]{10,})/)?.[1];
+      if (v && fileId) {
+        await db.mediaItem.create({ data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: "video", status: "approved" } });
+        await deliver(event, opts.replyTo, `Here's the video I mentioned: ${v.title}`, `drive:${fileId}|${v.title}`);
+      } else {
+        await deliver(event, opts.replyTo, `Sorry, I couldn't find a good video for that yet. ${event.organizerName} can share one with you.`);
+      }
+    } else if (opts.replyTo) {
+      await deliver(event, opts.replyTo, ok ? `Dot: ${reply}`.slice(0, 1500) : `Dot couldn't finish that (${st.status}).`);
+    }
     break;
   }
   await unlockDevice();

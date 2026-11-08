@@ -2,19 +2,21 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Contact, Event } from "@prisma/client";
 import { db } from "./db";
 import { llm } from "./llm";
-import { parseClips, parseFitQuestions, type Clip, type FitQuestion } from "./event";
+import { parseFitQuestions, type FitQuestion } from "./event";
+import { createBrief } from "./brief";
 
 // Topics the agent must never answer on its own: they always go to the organizer.
 const ORGANIZER_ONLY = /\b(refund|refunds|installment|installments|payment plan|monthly payment|pay monthly|split (the )?payment|pay in (parts|instal)|discount|scholarship|financial aid|withdraw|cancel(lation)?)\b/i;
 
-export type AgentResult = { reply: string; actions: string[] };
+export type AgentResult = { reply: string; actions: string[]; attachments: { caption: string; ref: string }[] };
 
 type Ctx = {
   event: Event;
   contact: Contact;
   fit: FitQuestion[];
-  clips: Clip[];
+  media: { id: string; kind: string; title: string; url: string; answers: string }[];
   attachments: string[]; // links appended after the model's text
+  files: { caption: string; ref: string }[]; // real files sent as follow-up messages
   actions: string[];
   flagged: boolean;
   answered: boolean;
@@ -68,12 +70,26 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: "send_clip",
-    description: "Send the link to one of the event's clips when the parent's question matches what the clip answers.",
+    name: "send_media",
+    description:
+      "Send the parent a real file in the chat when it beats text: a VIDEO from the media library when they want to see what students do / who teaches / what it's like, or the PDF program brief when they want something to read, keep or share. Use media_id for a library item, or 'brief' for the PDF.",
     input_schema: {
       type: "object",
-      properties: { clip_id: { type: "string" } },
-      required: ["clip_id"],
+      properties: {
+        media_id: { type: "string", description: "A media library id, or 'brief'" },
+        caption: { type: "string", description: "One short line shown with the file" },
+      },
+      required: ["media_id", "caption"],
+    },
+  },
+  {
+    name: "request_video",
+    description:
+      "When a video would help but nothing in the media library fits, ask Dot (the organizer's assistant with access to their Drive) to find one. It arrives as a follow-up in a few minutes. Tell the parent it's coming.",
+    input_schema: {
+      type: "object",
+      properties: { need: { type: "string", description: "What the video should show, in the parent's terms" } },
+      required: ["need"],
     },
   },
   {
@@ -95,9 +111,10 @@ function systemPrompt(c: Ctx, answers: { key: string; answer: string }[], openFl
   const fitLines = c.fit
     .map((q) => `- [${q.key}] ${q.question}${answered.has(q.key) ? `  → ANSWERED: ${answered.get(q.key)}` : "  → not yet asked/answered"}`)
     .join("\n");
-  const clipLines = c.clips.length
-    ? c.clips.map((k) => `- [${k.id}] ${k.title} — answers: ${k.answers}`).join("\n")
-    : "(no clips available — never invent or promise a video)";
+  const clipLines = [
+    "- [brief] PDF program brief (one page, from the organizer's own information)",
+    ...c.media.map((k) => `- [${k.id}] ${k.kind.toUpperCase()}: ${k.title} — answers: ${k.answers}`),
+  ].join("\n");
 
   return `You are SoldOut, texting on behalf of ${e.organizerName} (${e.organization}) about "${e.name}". You talk with a parent who texted JOIN. This is SMS: keep every reply under 450 characters, warm, direct and practical. Plain text only, no markdown.
 
@@ -115,14 +132,14 @@ CONVERSATION FLOW
 - If the parent asks a question, answer it first (call mark_answered), then continue with the next fit question.
 - If a teen has not built anything yet, call set_program with "builder" and explain kindly that Builder is the right starting point (an idea alone belongs in Builder). If they already have a first version of a product, set_program "founder". Mention the matching session time from the content.
 - If a grade is outside the eligible range, flag_for_organizer instead of deciding.
-- When a question matches a clip below, call send_clip (the link is added automatically; don't paste URLs yourself).
+- Choose the best format for each answer: short text for facts; a VIDEO (send_media) when seeing beats reading (what students do, who teaches, what a session is like); the PDF brief (send_media "brief") when they want details to read, keep or share. If a video would help and none fits, call request_video and say it's on its way. Never invent a video that isn't listed.
 - When all fit questions are answered and the parent says they're ready to sign up or pay, call send_enroll_link (the link is added automatically after your text). Tell them to complete one application per teen. Payment happens on that page.
 - Never paste URLs yourself.
 
 FIT QUESTIONS
 ${fitLines}
 
-CLIPS
+MEDIA LIBRARY
 ${clipLines}
 
 CURRENT STATE
@@ -172,13 +189,32 @@ async function runTool(c: Ctx, name: string, input: Record<string, string>): Pro
       await flag(c, input.question, input.reason);
       return "flagged; tell the parent the organizer will reply";
     }
-    case "send_clip": {
-      const clip = c.clips.find((k) => k.id === input.clip_id);
-      if (!clip) return "No clip with that id. Do not mention a video.";
-      c.attachments.push(`${clip.title}: ${clip.url}`);
-      await db.outcome.create({ data: { eventId: event.id, contactId: contact.id, type: "clip_sent", detail: clip.title } });
-      c.actions.push(`clip:${clip.id}`);
-      return "clip link will be appended";
+    case "send_media": {
+      if (input.media_id === "brief") {
+        const brief =
+          (await db.brief.findFirst({ where: { eventId: event.id, status: "approved" }, orderBy: { createdAt: "desc" } })) ??
+          (await db.brief.findFirst({ where: { eventId: event.id }, orderBy: { createdAt: "desc" } })) ??
+          (await createBrief(event));
+        c.files.push({ caption: input.caption || "Program brief (PDF)", ref: `brief:${brief.id}` });
+        await db.outcome.create({ data: { eventId: event.id, contactId: contact.id, type: "clip_sent", detail: "PDF brief" } });
+        c.actions.push("pdf_sent");
+        return "the PDF will be sent right after your text";
+      }
+      const m = c.media.find((k) => k.id === input.media_id);
+      if (!m) return "No media with that id. Use request_video or answer in text.";
+      const fileId = m.url.match(/\/d\/([\w-]{10,})/)?.[1];
+      if (!fileId) return "That item has no Drive file id; answer in text.";
+      c.files.push({ caption: input.caption || m.title, ref: `drive:${fileId}|${m.title}` });
+      await db.outcome.create({ data: { eventId: event.id, contactId: contact.id, type: "clip_sent", detail: m.title } });
+      c.actions.push(`video:${m.id}`);
+      return "the video file will be sent right after your text";
+    }
+    case "request_video": {
+      if (contact.channel !== "whatsapp") return "Dot can only deliver on WhatsApp; answer in text for now.";
+      const { askDot } = await import("./dot");
+      await askDot(event, "find_for_parent", { ask: input.need, replyTo: contact });
+      c.actions.push("dot_video_requested");
+      return "Dot is finding a video; it will be sent automatically in a few minutes. Tell the parent.";
     }
     case "send_enroll_link": {
       const answers = await db.fitAnswer.findMany({ where: { contactId: contact.id } });
@@ -212,8 +248,10 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
     event,
     contact,
     fit: parseFitQuestions(event.fitQuestions),
-    clips: parseClips(event.clips),
+    media: (await db.mediaItem.findMany({ where: { eventId: event.id, status: { not: "rejected" } }, orderBy: { createdAt: "asc" }, take: 30 }))
+      .map((m) => ({ id: m.id, kind: m.kind, title: m.title, url: m.url, answers: m.answers })),
     attachments: [],
+    files: [],
     actions: [],
     flagged: false,
     answered: false,
@@ -262,5 +300,5 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
 
   if (!text) text = c.flagged ? `Thanks! I'll check with ${event.organization} and they'll get back to you.` : "Thanks! One moment.";
   const reply = [text, ...c.attachments].join("\n\n");
-  return { reply, actions: c.actions };
+  return { reply, actions: c.actions, attachments: c.files };
 }

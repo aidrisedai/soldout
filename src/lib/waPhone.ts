@@ -132,3 +132,74 @@ function incomingSinceLastOutgoing(all: Node[]): string[] {
   const lastOut = bubbles.map((b) => b.outgoing).lastIndexOf(true);
   return bubbles.slice(lastOut + 1).map((b) => b.text).filter(Boolean);
 }
+
+// Send a real file (PDF, MP4) inside a WhatsApp chat, so the parent keeps it.
+// Path verified on the device: Attach → Document → Browse documents → device storage → Download → file → caption → Send.
+export async function sendFileViaPhone(ctx: PhoneCtx, phone: string, localPath: string, fileName: string, caption: string): Promise<{ ok: boolean; error?: string }> {
+  const { readFile } = await import("node:fs/promises");
+  const bytes = await readFile(localPath);
+  const form = new FormData();
+  form.append("file", new Blob([new Uint8Array(bytes)]), fileName);
+  const up = await fetch(`https://api.mobilerun.ai/v1/devices/${ctx.deviceId}/files?path=${encodeURIComponent("/sdcard/Download")}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${process.env.MOBILERUN_API_KEY}` },
+    body: form,
+  });
+  if (!up.ok) return { ok: false, error: `upload to phone failed (${up.status})` };
+
+  const find = async (pred: (n: Node) => boolean, tries = 6) => {
+    for (let i = 0; i < tries; i++) {
+      const all = await nodes(ctx);
+      const hit = all.find(pred);
+      if (hit) return hit;
+      await sleep(900);
+    }
+    return null;
+  };
+  const tapWhen = async (pred: (n: Node) => boolean, what: string) => {
+    const n = await find(pred);
+    if (!n) throw new Error(`couldn't find ${what}`);
+    await tapNode(ctx, n);
+    await sleep(1200);
+  };
+
+  try {
+    await ctx.mr.devices.deepLink.executeDeepLink(ctx.deviceId, { deepLink: `https://wa.me/${digits(phone)}`, packageName: PKG });
+    await sleep(1500);
+    await tapWhen((n) => n.resourceId === id("input_attach_button"), "Attach");
+    await tapWhen((n) => n.resourceId === id("pickfiletype_document_holder"), "Document");
+    await tapWhen((n) => n.resourceId === id("browseOtherDocs"), "Browse documents");
+    // DocumentsUI may reopen in the Download folder; otherwise go via device storage.
+    let file = await find((n) => n.text === fileName, 2);
+    if (!file) {
+      await tapWhen((n) => n.contentDescription === "Show roots", "Show roots");
+      const roots = await nodes(ctx);
+      const skip = /^(Recent|Documents|Downloads|Images|Videos|Audio|Drive|Photos)$/;
+      const storage = roots.filter((n) => n.resourceId === "android:id/title" && n.text && !skip.test(n.text)).pop();
+      if (!storage) throw new Error("device storage root not found");
+      await tapNode(ctx, storage);
+      await sleep(1200);
+      await tapWhen((n) => n.resourceId === "android:id/title" && n.text === "Download", "Download folder");
+      file = await find((n) => n.text === fileName);
+    }
+    if (!file) throw new Error(`file ${fileName} not shown in picker`);
+    await tapNode(ctx, file);
+    await sleep(2000);
+    if (caption) {
+      await tapWhen((n) => n.resourceId === id("caption"), "caption box");
+      await ctx.mr.devices.keyboard.write(ctx.deviceId, { text: caption });
+      await sleep(500);
+    }
+    await tapWhen((n) => n.resourceId === id("send") && n.isClickable, "Send");
+    await sleep(2500);
+    return { ok: true };
+  } catch (e) {
+    for (let i = 0; i < 3; i++) await ctx.mr.devices.actions.global(ctx.deviceId, { action: 1 }).catch(() => {});
+    return { ok: false, error: (e as Error).message };
+  } finally {
+    await fetch(`https://api.mobilerun.ai/v1/devices/${ctx.deviceId}/files?path=${encodeURIComponent(`/sdcard/Download/${fileName}`)}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${process.env.MOBILERUN_API_KEY}` },
+    }).catch(() => {});
+  }
+}

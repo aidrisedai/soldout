@@ -10,7 +10,9 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "setup": "prisma db push && tsx prisma/seed.ts",
-    "poll": "tsx --env-file=.env scripts/poll.ts"
+    "poll": "tsx --env-file=.env scripts/poll.ts",
+    "reset": "tsx --env-file=.env scripts/reset.ts",
+    "worker": "tsx --env-file=.env scripts/poll.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

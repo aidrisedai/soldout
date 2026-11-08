@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Ev = { id: string; name: string; keyword: string; organization: string };
-type Msg = { id: string; direction: "in" | "out"; body: string; status: string; createdAt: string };
+type Msg = { id: string; direction: "in" | "out"; body: string; status: string; createdAt: string; attachment?: string | null };
 type Contact = {
   id: string;
   stage: string;
@@ -101,7 +101,7 @@ export default function Simulate() {
     setError("");
   }
 
-  const quick = ev ? [`JOIN ${ev.keyword}`, "What time are the sessions?", "Do you offer refunds?", "We're ready to sign up", "STOP"] : [];
+  const quick = ev ? [`JOIN ${ev.keyword}`, "What time are the sessions?", "Can you send me something I can share with my husband?", "Can I see what students actually do?", "Do you offer refunds?", "We're ready to sign up", "STOP"] : [];
 
   return (
     <main className="min-h-screen bg-zinc-100 p-4 md:p-8">
@@ -130,6 +130,12 @@ export default function Simulate() {
               {(contact?.messages ?? []).map((m) => (
                 <div key={m.id} className={`flex ${m.direction === "in" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.direction === "in" ? "bg-blue-500 text-white" : "bg-zinc-200 text-zinc-900"}`}>
+                    {m.attachment && (
+                      <a href={`/api/attachment?messageId=${m.id}`} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 text-xs font-semibold text-zinc-800">
+                        <span>{m.attachment.startsWith("brief:") ? "📄" : "🎬"}</span>
+                        <span>{m.attachment.startsWith("brief:") ? "Program-Brief.pdf" : m.attachment.split("|")[1] ?? "Video"}</span>
+                      </a>
+                    )}
                     <Linkified text={m.body} />
                   </div>
                 </div>

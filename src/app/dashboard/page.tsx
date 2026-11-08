@@ -81,6 +81,13 @@ export default function Dashboard() {
         {error && <div className="mb-4 rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
 
         <div className="space-y-8">
+          {events.length === 0 && (
+            <div className="rounded-xl bg-white p-10 text-center shadow-sm">
+              <p className="text-lg font-semibold">No campaigns yet.</p>
+              <p className="mt-1 text-sm text-zinc-600">Set a goal and SoldOut takes it from there.</p>
+              <Link href="/intake" className="mt-4 inline-block rounded bg-zinc-900 px-4 py-2 font-semibold text-white">Start a campaign →</Link>
+            </div>
+          )}
           {events.map((e) => {
             const s = e.score;
             const seatsPct = e.goalSeats ? Math.min(100, Math.round((s.paid / e.goalSeats) * 100)) : null;

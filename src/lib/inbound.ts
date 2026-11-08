@@ -88,6 +88,7 @@ export async function handleInbound(input: InboundInput): Promise<InboundResult>
   try {
     const result = await runAgent(event, contact, text);
     const r = await deliver(event, contact, result.reply);
+    for (const a of result.attachments) await deliver(event, contact, a.caption, a.ref);
     return { ok: true, eventId: event.id, contactId: contact.id, replies: [r.body], actions: result.actions, delivery: r.status };
   } catch (e) {
     const message = e instanceof Error ? e.message : "agent error";
@@ -126,12 +127,13 @@ async function findContact(phone: string, eventId?: string): Promise<Contact | n
   return db.contact.findFirst({ where: { phone }, orderBy: { updatedAt: "desc" } });
 }
 
-export async function deliver(event: Event, contact: Contact, body: string) {
+export async function deliver(event: Event, contact: Contact, body: string, attachment?: string) {
   const msg = await db.message.create({
-    data: { eventId: event.id, contactId: contact.id, direction: "out", body, channel: contact.channel, status: contact.channel === "simulate" ? "ok" : "queued" },
+    data: { eventId: event.id, contactId: contact.id, direction: "out", body, channel: contact.channel, attachment, status: contact.channel === "simulate" ? "ok" : "queued" },
   });
   await db.contact.update({ where: { id: contact.id }, data: { updatedAt: new Date() } });
   if (contact.channel === "simulate") return { body, status: "ok" };
+  if (attachment) return { body, status: "queued" }; // files go out through the phone worker
   const sent = await sendOn(contact.channel, contact.phone, body, msg.id);
   await db.message.update({
     where: { id: msg.id },

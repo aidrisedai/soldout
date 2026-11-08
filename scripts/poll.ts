@@ -5,7 +5,8 @@
 //   - WhatsApp on the Mobilerun cloud phone: sends queued replies, reads unread chats
 import Mobilerun from "@mobilerun/sdk";
 import { PrismaClient } from "@prisma/client";
-import { phoneCtx, readUnread, sendViaPhone } from "../src/lib/waPhone";
+import { phoneCtx, readUnread, sendFileViaPhone, sendViaPhone } from "../src/lib/waPhone";
+import { resolveAttachment } from "../src/lib/files";
 import { deviceLocked } from "../src/lib/dot";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
@@ -89,7 +90,17 @@ async function whatsappPhoneLoop() {
         include: { contact: { select: { phone: true } } },
       });
       for (const m of queued) {
-        const r = await sendViaPhone(ctx, m.contact.phone, m.body);
+        let r: { ok: boolean; error?: string };
+        if (m.attachment) {
+          try {
+            const f = await resolveAttachment(db, m.attachment);
+            r = await sendFileViaPhone(ctx, m.contact.phone, f.path, f.fileName, m.body);
+          } catch (e) {
+            r = { ok: false, error: (e as Error).message };
+          }
+        } else {
+          r = await sendViaPhone(ctx, m.contact.phone, m.body);
+        }
         await db.message.update({ where: { id: m.id }, data: r.ok ? { status: "sent" } : { status: "failed", error: r.error } });
         console.log(`[whatsapp] → ${m.contact.phone}: ${r.ok ? "sent" : r.error}`);
       }
