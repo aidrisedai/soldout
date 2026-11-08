@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One paid program an organizer wants to fill. Content, contacts and
+// messages are always scoped to a single event and never mixed.
+model Event {
+  id              String   @id @default(cuid())
+  keyword         String   @unique // parents text "JOIN <keyword>"
+  name            String
+  organizerName   String
+  organization    String
+  goalSeats       Int?
+  deadline        String?
+  price           String?
+  dateText        String?
+  place           String?
+  audience        String?
+  applyLink       String? // where parents enroll and pay
+  paymentLink     String? // Stripe test payment link
+  content         String // the organizer's own content; the ONLY source of answers
+  fitQuestions    String // JSON: [{ key, question }]
+  clips           String   @default("[]") // JSON: [{ id, title, url, answers }]
+  createdAt       DateTime @default(now())
+
+  contacts      Contact[]
+  messages      Message[]
+  fitAnswers    FitAnswer[]
+  outcomes      Outcome[]
+  flags         OrganizerFlag[]
+  strategies    Strategy[]
+}
+
+// A person who texted JOIN for one event. Same phone on two events = two contacts.
+model Contact {
+  id         String    @id @default(cuid())
+  eventId    String
+  phone      String
+  channel    String    @default("simulate") // simulate | sms
+  status     String    @default("active") // active | opted_out
+  stage      String    @default("fit") // fit | qa | link_sent | paid | builder
+  program    String? // founder | builder
+  optedInAt  DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  event      Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  fitAnswers FitAnswer[]
+  outcomes   Outcome[]
+  flags      OrganizerFlag[]
+
+  @@unique([eventId, phone])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  eventId    String
+  contactId  String
+  direction  String // in | out
+  body       String
+  channel    String // simulate | sms
+  status     String   @default("ok") // ok | queued | sent | failed | not_sendable
+  externalId String?  @unique // Mobilerun message id
+  error      String?
+  createdAt  DateTime @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model FitAnswer {
+  id        String   @id @default(cuid())
+  eventId   String
+  contactId String
+  key       String
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, key])
+}
+
+// opted_in | answered | clip_sent | link_sent | paid | needs_organizer | routed_builder | opted_out
+model Outcome {
+  id        String   @id @default(cuid())
+  eventId   String
+  contactId String
+  type      String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+// A question the content can't answer, or a topic only the organizer may answer.
+model OrganizerFlag {
+  id         String    @id @default(cuid())
+  eventId    String
+  contactId  String
+  question   String
+  reason     String
+  status     String    @default("open") // open | answered
+  reply      String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+// Phase 2: Good Strategy / Bad Strategy kernel, approved before anyone is contacted.
+model Strategy {
+  id         String    @id @default(cuid())
+  eventId    String
+  body       String // JSON: { diagnosis, policies[], whoNext[] }
+  status     String    @default("draft") // draft | approved
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// Bookkeeping for the Mobilerun inbox poller.
+model KV {
+  key   String @id
+  value String
+}
