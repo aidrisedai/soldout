@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { socialViaPhone } from "@/lib/social";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -8,15 +9,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     db.kV.findMany({ where: { key: { startsWith: "people:" }, value: "1" } }),
   ]);
   const touches = await db.touch.findMany({ where: { prospectId: { in: prospects.map((p) => p.id) } }, orderBy: { createdAt: "asc" } });
+  const fails = await db.kV.findMany({ where: { key: { in: touches.map((t) => `social_fail:${t.id}`) } } });
+  const failBy = new Map(fails.map((f) => [f.key.slice(12), f.value]));
   const referred = await db.contact.groupBy({ by: ["referredBy"], where: { eventId: id, referredBy: { not: null } }, _count: true });
   const refCount = new Map(referred.map((r) => [r.referredBy, r._count]));
   return NextResponse.json({
+    phone: socialViaPhone(),
     searching: busy.map((b) => b.key.slice(7)),
     prospects: prospects.map((p) => ({
       ...p,
       channels: JSON.parse(p.channels),
       research: p.research ? JSON.parse(p.research) : null,
-      touches: touches.filter((t) => t.prospectId === p.id),
+      touches: touches.filter((t) => t.prospectId === p.id).map((t) => ({ ...t, phoneError: failBy.get(t.id) ?? null })),
       broughtIn: refCount.get(p.joinCode) ?? 0,
     })),
   });

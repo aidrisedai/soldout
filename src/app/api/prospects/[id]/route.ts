@@ -30,6 +30,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
         await db.prospect.updateMany({ where: { id, status: { in: ["found", "approved"] } }, data: { status: "contacted" } });
         return NextResponse.json({ ok: true });
+      case "phone_send": // hand a ready note to the cloud phone
+        await db.touch.updateMany({ where: { prospectId: id, channel: body.channel ?? { in: ["linkedin", "instagram"] }, status: "approved" }, data: { status: "queued" } });
+        return NextResponse.json({ ok: true });
       case "skip":
         await db.prospect.update({ where: { id }, data: { status: "done" } });
         return NextResponse.json({ ok: true });

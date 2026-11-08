@@ -10,6 +10,7 @@ import { resolveAttachment } from "../src/lib/files";
 import { deviceLocked } from "../src/lib/dot";
 import { processConnectorReplies } from "../src/lib/connector";
 import { advanceAll } from "../src/lib/autopilot";
+import { sendNextSocial, socialViaPhone } from "../src/lib/social";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 
@@ -148,7 +149,18 @@ async function autopilotLoop() {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// LinkedIn notes and Instagram DMs from the organizer's accounts on the cloud phone, one at a time.
+async function socialLoop() {
+  console.log("[social] sending LinkedIn/Instagram notes via the cloud phone");
+  for (;;) {
+    let did = false;
+    try { did = await sendNextSocial(); } catch (e) { console.error("[social]", (e as Error).message); }
+    await new Promise((r) => setTimeout(r, did ? 90_000 : 30_000)); // spaced out, like a person
+  }
+}
+
 const loops: Promise<unknown>[] = [];
+if (socialViaPhone()) loops.push(socialLoop());
 if (process.env.TELEGRAM_BOT_TOKEN) loops.push(telegramLoop(process.env.TELEGRAM_BOT_TOKEN));
 if (process.env.MOBILERUN_API_KEY) loops.push(mobilerunLoop(process.env.MOBILERUN_API_KEY));
 if (process.env.MOBILERUN_API_KEY && process.env.WHATSAPP_VIA !== "cloud") loops.push(whatsappPhoneLoop());

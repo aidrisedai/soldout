@@ -4,6 +4,7 @@ import type { Event, Prospect } from "@prisma/client";
 import { db } from "./db";
 import { complete, llm } from "./llm";
 import { createBrief } from "./brief";
+import { socialViaPhone } from "./social";
 import { emailConfigured, markHandled, replyEmail, sendEmail, unrepliedEmails, type MailAttachment } from "./email";
 
 // Step 4 of docs/FLOW.md: a real conversation with a connector, not a broadcast.
@@ -35,7 +36,8 @@ export function shortNote(text: string, suffix: string, max = 300): string {
 }
 
 // Reach a person on every channel we have for them, each message pointing to the others.
-// Automatic: WhatsApp (consented contacts only) and email. Ready for the organizer to send: LinkedIn, Instagram, warm intro.
+// Automatic: WhatsApp (consented contacts only), email, and LinkedIn/Instagram via the cloud phone when SOCIAL_VIA_PHONE=1.
+// Otherwise LinkedIn/Instagram notes are ready for the organizer to send. No channel at all: a warm-intro note.
 export async function approveAndSend(prospectId: string) {
   const p = await db.prospect.findUniqueOrThrow({ where: { id: prospectId } });
   const channels = JSON.parse(p.channels) as Channels;
@@ -74,8 +76,9 @@ export async function approveAndSend(prospectId: string) {
     if (!channels[ch]) continue;
     const also = alsoLine(others(ch), "short");
     const body = ch === "linkedin" ? shortNote(meta.linkedinNote || p.opener, also) : `${p.opener}${also ? `\n\n${also}` : ""}`;
-    await db.touch.create({ data: { prospectId: p.id, channel: ch, direction: "out", body, status: "approved" } });
-    sent.push(`${ch}_ready`);
+    const phone = socialViaPhone(); // the cloud phone sends it from the organizer's account
+    await db.touch.create({ data: { prospectId: p.id, channel: ch, direction: "out", body, status: phone ? "queued" : "approved" } });
+    sent.push(phone ? `${ch}_queued` : `${ch}_ready`);
   }
   if (!sent.length) {
     await db.touch.create({ data: { prospectId: p.id, channel: "intro", direction: "out", body: p.opener, status: "approved" } });

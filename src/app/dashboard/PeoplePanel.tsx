@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Working from "@/components/Working";
 
-type Touch = { id: string; channel: string; direction: string; body: string; status: string; author: string; createdAt: string };
+type Touch = { id: string; channel: string; direction: string; body: string; status: string; author: string; createdAt: string; phoneError?: string | null };
 type Prospect = {
   id: string;
   targetId: string;
@@ -38,6 +38,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [people, setPeople] = useState<Prospect[]>([]);
   const [searching, setSearching] = useState<string[]>([]);
+  const [phone, setPhone] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [reply, setReply] = useState<Record<string, string>>({});
@@ -51,6 +52,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
     setTargets(t.targets.filter((x: Target) => x.decision === "go"));
     setPeople(p.prospects);
     setSearching(p.searching);
+    setPhone(!!p.phone);
   }, [eventId]);
   useEffect(() => {
     load();
@@ -99,9 +101,10 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                   const ladder = [
                     p.channels.whatsapp && "WhatsApp (your contact)",
                     p.channels.email && "email (sent automatically)",
-                    p.channels.linkedin && "LinkedIn note (you send)",
-                    p.channels.instagram && "Instagram DM (you send)",
+                    p.channels.linkedin && `LinkedIn note (${phone ? "sent from the phone" : "you send"})`,
+                    p.channels.instagram && `Instagram DM (${phone ? "sent from the phone" : "you send"})`,
                   ].filter(Boolean).join(" + ") || "Warm intro (through your network)";
+                  const sending = p.touches.filter((x) => x.status === "queued" || x.status === "sending");
                   const ready = p.touches.filter((x) => x.status === "approved" && ["linkedin", "instagram", "intro"].includes(x.channel));
                   return (
                     <div key={p.id} className="rounded-lg border bg-paper p-3 text-sm">
@@ -143,6 +146,12 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                         </div>
                       )}
 
+                      {sending.map((x) => (
+                        <p key={x.id} className="mt-2 flex items-center gap-2 rounded bg-sky-50 p-2 text-xs">
+                          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-sky-600" />
+                          {x.status === "sending" ? "The phone is sending" : "Queued on the phone:"} {x.channel === "linkedin" ? "LinkedIn connection note" : "Instagram DM"}…
+                        </p>
+                      ))}
                       {ready.map((x) => {
                         const intro = x.channel === "intro";
                         const text = intro ? `Could you introduce me to ${p.name} (${p.role ?? "community leader"})? Here's a short note you can pass along:\n\n${x.body}` : x.body;
@@ -152,10 +161,12 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                             <p className="font-semibold">
                               {intro ? `Warm intro: no public channel found for ${p.name.split(" ")[0]}. Forward this to someone who knows them:` : x.channel === "linkedin" ? "Send this LinkedIn connection note:" : "Send this Instagram DM:"}
                             </p>
+                            {x.phoneError && <p className="mt-1 text-rose-700">The phone couldn&apos;t send it: {x.phoneError}</p>}
                             <p className="mt-1 whitespace-pre-wrap rounded bg-paper p-2">{text}</p>
                             <div className="mt-1 flex gap-2">
                               <button onClick={() => navigator.clipboard.writeText(text)} className="underline">Copy</button>
                               {link && <a href={link} target="_blank" rel="noreferrer" className="underline">Open profile</a>}
+                              {phone && !intro && <button onClick={() => act(p.id, { action: "phone_send", channel: x.channel })} className="underline">{x.phoneError ? "Retry from phone" : "Send from phone"}</button>}
                               <button onClick={() => act(p.id, { action: "linkedin_sent", channel: x.channel })} className="underline">{intro ? "Mark intro asked" : "Mark sent"}</button>
                             </div>
                           </div>
