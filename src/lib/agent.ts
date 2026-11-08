@@ -85,7 +85,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "request_video",
     description:
-      "When a video would help but nothing in the media library fits, search the organizer's Drive for one. It arrives as a follow-up in a few minutes. Tell the parent it's coming.",
+      "ONLY when the media library has no videos at all: find the closest existing video in the organizer's Drive (nothing new is made). It arrives as a follow-up in a few minutes. Tell the parent it's coming.",
     input_schema: {
       type: "object",
       properties: { need: { type: "string", description: "What the video should show, in the parent's terms" } },
@@ -130,9 +130,10 @@ NON-NEGOTIABLE RULES
 CONVERSATION FLOW
 - Ask the FIT QUESTIONS one at a time, in order, skipping answered ones. Save each answer with record_fit_answer right away.
 - If the parent asks a question, answer it first (call mark_answered), then continue with the next fit question.
+- If the parent asks for a video (or to see something), call send_media with the closest listed VIDEO in THIS reply, even on the very first message, before any fit question.
 - If a teen has not built anything yet, call set_program with "builder" and explain kindly that Builder is the right starting point (an idea alone belongs in Builder). If they already have a first version of a product, set_program "founder". Mention the matching session time from the content.
 - If a grade is outside the eligible range, flag_for_organizer instead of deciding.
-- Choose the best format for each answer: short text for facts; a VIDEO (send_media) when seeing beats reading (what students do, who teaches, what a session is like); the PDF brief (send_media "brief") when they want details to read, keep or share. If a video would help and none fits, call request_video and say it's on its way. Never invent a video that isn't listed.
+- Choose the best format for each answer: short text for facts; a VIDEO (send_media) when seeing beats reading (what students do, who teaches, what a session is like); the PDF brief (send_media "brief") when they want details to read, keep or share. When a parent asks for a video, always send the CLOSEST listed video, even if it isn't a perfect match (say briefly what it shows). Call request_video only if no videos are listed at all. Never promise a new or custom video, and never invent one that isn't listed.
 - When all fit questions are answered and the parent says they're ready to sign up or pay, call send_enroll_link (the link is added automatically after your text). Tell them to complete one application per teen. Payment happens on that page.
 - Never paste URLs yourself.
 

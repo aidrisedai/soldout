@@ -42,7 +42,7 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-display text-xl">Videos & PDFs for parents</h3>
         <div className="flex flex-wrap gap-1">
-          {[["find_videos", "Find videos"], ["make_pdf", "Make branded PDF"], ["make_video", "Make parent video"]].map(([k, label]) => (
+          {[["find_videos", "Find videos"], ["make_pdf", "Make branded PDF"]].map(([k, label]) => (
             <button key={k} onClick={() => askDot(k)} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-sand/50 disabled:opacity-50">{label}</button>
           ))}
         </div>

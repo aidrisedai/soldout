@@ -76,8 +76,8 @@ function dotPrompt(event: Event, kind: DotJobKind, ask?: string): string {
       return `${ask} (Answer briefly, under 120 words. Write any links as full URLs in plain text. ${sharing()})`;
     case "find_for_parent":
       return [
-        `From my ${event.organization} Google Drive, find the ONE best finished, edited video (not raw footage) showing: ${ask}.`,
-        `It is for a parent considering "${event.name}". Only pick a video we can share publicly.`,
+        `From my ${event.organization} Google Drive, pick the ONE existing finished, edited video (not raw footage) that comes CLOSEST to showing: ${ask}.`,
+        `It doesn't need to be a perfect match; the closest one we already have is right. Do not create or edit any video. It is for a parent considering "${event.name}". Only pick a video we can share publicly.`,
         sharing(), reply,
       ].join(" ");
     case "find_videos":
