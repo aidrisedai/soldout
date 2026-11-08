@@ -1,217 +1,115 @@
 import Link from "next/link";
+import Nav from "@/components/Nav";
 import ProofDemo from "./ProofDemo";
-
-const CHANNELS = ["WhatsApp", "Email", "LinkedIn", "Instagram", "SMS", "Newsletters", "In person"];
-
-const STEPS = [
-  {
-    n: "01",
-    title: "Tell it the goal",
-    body: "Seats, deadline, price, and the program content you already have. FAQ, brochure, videos in your Drive.",
-  },
-  {
-    n: "02",
-    title: "It does the research",
-    body: "SoldOut maps the communities your families already trust (schools, masjids, youth groups, newsletters) and the messenger in each one.",
-  },
-  {
-    n: "03",
-    title: "It picks the best channel",
-    body: "For every messenger it chooses how to reach them: email, WhatsApp, LinkedIn, Instagram or a visit. It drafts the exact message.",
-  },
-  {
-    n: "04",
-    title: "You approve",
-    body: "Nothing goes out until you say so. Messengers share your JOIN code; families opt in on their own.",
-  },
-  {
-    n: "05",
-    title: "It runs every conversation",
-    body: "Fit questions, answers from your content only, and the right format each time: a quick reply, your video, or a PDF they can keep.",
-  },
-  {
-    n: "06",
-    title: "Seats fill, it learns",
-    body: "Links sent, seats paid, which community converts. Questions only you can answer come to you; the strategy updates from what works.",
-  },
-];
 
 function Check() {
   return (
-    <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 flex-none text-emerald-500" fill="currentColor" aria-hidden>
-      <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L3.3 9.7a1 1 0 111.4-1.4l3.8 3.8 6.8-6.8a1 1 0 011.4 0z" clipRule="evenodd" />
+    <svg viewBox="0 0 20 20" className="h-5 w-5 flex-none text-forest" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+      <circle cx="10" cy="10" r="8.2" />
+      <path d="M6.5 10.2l2.3 2.3 4.7-4.9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white text-zinc-900">
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-zinc-950 text-white">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[60rem] -translate-x-1/2 rounded-full bg-emerald-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
-        <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-6">
-          <span className="text-lg font-black tracking-tight">
-            Sold<span className="text-emerald-400">Out</span>
-          </span>
-          <div className="flex items-center gap-2 text-sm">
-            <Link href="/dashboard" className="rounded-lg px-3 py-2 text-zinc-300 hover:text-white">Dashboard</Link>
-            <Link href="/intake" className="rounded-lg bg-white px-4 py-2 font-semibold text-zinc-900 hover:bg-zinc-200">Start a campaign</Link>
-          </div>
-        </nav>
+    <main className="min-h-screen bg-cream text-ink">
+      <Nav links={[{ href: "#proof", label: "Watch it work" }, { href: "#how", label: "How it works" }, { href: "#promises", label: "Promises" }, { href: "/dashboard", label: "Dashboard" }]} />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-28 pt-8 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
+      {/* HERO: headline + the live A-Z demo right away */}
+      <section id="proof" className="mx-auto max-w-6xl px-5 pb-20 pt-12 lg:pt-14">
+        <div className="grid items-end gap-8 lg:grid-cols-[1.2fr_1fr]">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> AI campaign engine for in-person programs
-            </p>
-            <h1 className="mt-6 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Set the goal.
-              <br />
-              <span className="bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent">We fill the seats.</span>
+            <span className="inline-block -rotate-2 rounded-md border-2 border-clay px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-clay">For in-person youth programs</span>
+            <h1 className="font-display mt-6 text-[2.7rem] leading-[1.05] sm:text-6xl">
+              Every seat filled by the people families <em className="text-clay">already trust.</em>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-300">
-              SoldOut finds the communities your families already trust, works out the best way to reach each messenger,
-              and turns every interested parent into a paid seat, answering only from your own content.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/intake" className="rounded-xl bg-emerald-500 px-6 py-3.5 font-bold text-zinc-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400">
-                Start a campaign →
-              </Link>
-              <a href="#proof" className="rounded-xl border border-white/15 px-6 py-3.5 font-semibold text-white hover:bg-white/5">
-                Watch it work
-              </a>
-            </div>
-            <div className="mt-10 flex flex-wrap gap-2">
-              {CHANNELS.map((c) => (
-                <span key={c} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">{c}</span>
-              ))}
-            </div>
           </div>
-
-          {/* Campaign preview (illustration) */}
-          <div className="relative">
-            <div className="rounded-2xl border border-white/10 bg-zinc-900/80 p-5 shadow-2xl backdrop-blur">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-zinc-500">Campaign</p>
-                  <p className="font-semibold">Founder program · 20 seats · Nov 15</p>
-                </div>
-                <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">Live</span>
-              </div>
-              <div className="mt-4 h-2 rounded-full bg-zinc-800"><div className="h-2 w-[35%] rounded-full bg-gradient-to-r from-emerald-500 to-teal-300" /></div>
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                {[["Messengers", "Approved"], ["Families", "Opted in"], ["Seats", "Paid"]].map(([a, b]) => (
-                  <div key={a} className="rounded-lg bg-zinc-800/70 p-3">
-                    <p className="text-sm font-semibold">{a}</p>
-                    <p className="text-[11px] text-zinc-500">{b}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 space-y-2 text-sm">
-                <p className="text-xs uppercase tracking-wider text-zinc-500">Who next</p>
-                {[
-                  ["Masjid youth director", "Email", "Ready"],
-                  ["Islamic school newsletter", "Email", "Ready"],
-                  ["Youth group admin", "WhatsApp", "Sent"],
-                ].map(([who, ch, st]) => (
-                  <div key={who} className="flex items-center justify-between rounded-lg bg-zinc-800/50 px-3 py-2">
-                    <span>{who}</span>
-                    <span className="flex items-center gap-2 text-xs">
-                      <span className="rounded bg-white/10 px-1.5 py-0.5 text-zinc-300">{ch}</span>
-                      <span className={st === "Sent" ? "text-emerald-300" : "text-amber-300"}>{st}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <div>
+            <p className="text-lg leading-relaxed text-ink/75">
+              Set the goal. SoldOut researches the communities your families belong to, reaches the connectors in each one, and talks every
+              parent through to the enrollment link, answering only from your own content.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/intake" className="rounded-full bg-clay px-6 py-3.5 font-semibold text-white shadow-sm hover:bg-clay-dark">Start a campaign →</Link>
+              <Link href="/simulate" className="rounded-full border-2 border-ink/15 px-6 py-3 font-semibold hover:bg-sand">Simulate a parent</Link>
             </div>
-            <div className="absolute -bottom-16 -left-6 hidden w-64 rounded-2xl border border-white/10 bg-white p-3 text-sm text-zinc-900 shadow-2xl sm:block">
-              <p className="rounded-xl rounded-br-sm bg-emerald-100 px-3 py-2">Can I see what students actually do?</p>
-              <p className="mt-2 rounded-xl rounded-bl-sm bg-zinc-100 px-3 py-2">Here&apos;s a 1-minute video from the program 🎬</p>
-            </div>
-            <p className="mt-24 text-center text-[11px] text-zinc-600 sm:text-right">Illustration</p>
           </div>
         </div>
-      </section>
-
-      {/* PROBLEM */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid gap-10 lg:grid-cols-2">
-          <h2 className="text-3xl font-black leading-tight tracking-tight sm:text-4xl">
-            Families don&apos;t buy from ads.
-            <br />
-            They buy when someone they trust says <span className="text-emerald-600">&ldquo;this is good.&rdquo;</span>
-          </h2>
-          <div className="space-y-4 text-lg text-zinc-600">
-            <p>
-              Organizers know this, so they spend their nights on WhatsApp groups, emails to schools, and the same parent
-              questions over and over. Seats still sit empty a week before launch.
-            </p>
-            <p className="font-semibold text-zinc-900">
-              SoldOut does that work: the research, the outreach plan, every conversation, and the follow-up. You stay in charge.
-            </p>
-          </div>
+        <div className="mt-12">
+          <p className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-clay">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-clay" /> Watch it work · A to Z, from a real campaign
+          </p>
+          <ProofDemo />
         </div>
       </section>
 
       {/* HOW */}
-      <section id="how" className="bg-zinc-50 py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-emerald-600">How it works</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">From goal to paid seats</h2>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="group rounded-2xl border border-zinc-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg">
-                <p className="font-mono text-sm font-bold text-emerald-600">{s.n}</p>
-                <h3 className="mt-3 text-lg font-bold">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600">{s.body}</p>
+      <section id="how" className="bg-sand/70 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <h2 className="font-display text-4xl sm:text-5xl">From goal to paid seats.</h2>
+          <div className="mt-12 grid gap-10 md:grid-cols-3">
+            {[
+              ["01", "Set your goal", "Seats, deadline, price and the program content you already have. SoldOut drafts a strategy: what’s in the way, what to try, how to test it."],
+              ["02", "Approve the plan", "It researches each community, finds the connectors and drafts a personal message for each. Nothing goes out until you approve."],
+              ["03", "Watch seats fill", "Connectors share their JOIN code; parents get answers, videos and a PDF on WhatsApp. Refunds and installments come to you."],
+            ].map(([n, t, b]) => (
+              <div key={n} className="border-t-2 border-ink/15 pt-6">
+                <p className="font-display text-5xl text-clay">{n}</p>
+                <h3 className="mt-4 text-lg font-bold">{t}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink/70">{b}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* PROOF: the whole process, automated */}
-      <section id="proof" className="bg-zinc-950 py-20 text-white">
-        <div className="mx-auto max-w-6xl px-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-emerald-400">Watch it work</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">From goal to paid seat, A to Z</h2>
-          <p className="mt-3 max-w-2xl text-zinc-400">Every step below is SoldOut&apos;s real output from its first campaign, EdAI&apos;s Founder program. Nothing is mocked up.</p>
-          <div className="mt-10"><ProofDemo /></div>
-        </div>
-      </section>
-
-      {/* PRINCIPLES */}
-      <section className="bg-zinc-50 py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-3xl font-black tracking-tight sm:text-4xl">Trust is the whole point, so we protect it</h2>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ["Public info only", "Research uses public, professional information: org sites, public profiles. No bought lists, nothing about anyone's children."],
-              ["Your words, no inventions", "Answers come only from your content. No made-up stats, quotes or testimonials, ever."],
-              ["You approve, you can take over", "The strategy, every person and every first message wait for your approval. Take over any conversation at any time."],
-              ["Sensitive topics go to you", "Refunds, installments and anything unconfirmed are flagged for you to answer."],
-              ["A respectful first touch", "LinkedIn or email first, one follow-up at most, and \u201cno thanks\u201d is final. WhatsApp only after someone replies or texts JOIN."],
-              ["Payments stay safe", "Payment links run in test mode until you switch them on."],
-            ].map(([t, b]) => (
-              <div key={t} className="rounded-2xl border border-zinc-200 bg-white p-6">
-                <h3 className="font-bold text-emerald-700">{t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600">{b}</p>
+      {/* CONVERSATION + PROMISES */}
+      <section id="promises" className="bg-paper/60 py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
+          <div className="mx-auto w-full max-w-sm rounded-[2rem] border border-line bg-sand/70 p-4">
+            <div className="flex items-center gap-3 border-b border-line pb-3">
+              <span className="font-display flex h-9 w-9 items-center justify-center rounded-full bg-clay text-white">E</span>
+              <div><p className="text-sm font-bold">EdAI Founder Program</p><p className="text-[11px] text-muted">via SoldOut · answers from EdAI’s content only</p></div>
+            </div>
+            <div className="space-y-2.5 pt-3 text-[13px]">
+              <p className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-paper px-3 py-2">JOIN FOUNDER</p>
+              <p className="w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-mint px-3 py-2">Assalamu alaikum! How many teens are you thinking of signing up, and what grade is each one in?</p>
+              <p className="ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-sm bg-paper px-3 py-2">One, 10th grade. Can we pay in two parts?</p>
+              <div className="w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-mint px-3 py-2">
+                I’ve passed that to the organizer; they’ll reply here. Meanwhile, here’s the brief to keep.
+                <span className="mt-2 flex items-center gap-2 rounded-lg bg-paper px-2.5 py-2 text-xs font-semibold"><span className="rounded bg-clay px-1.5 py-0.5 text-[10px] text-white">PDF</span>Founder Program brief</span>
               </div>
-            ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="font-display text-4xl leading-tight sm:text-[2.7rem]">A conversation parents asked for. Rules SoldOut never breaks.</h2>
+            <ul className="mt-8 divide-y divide-line border-y border-line">
+              {[
+                "Messages parents only after they text JOIN",
+                "Researches public, professional info only, never anyone’s children",
+                "Answers only from your own content",
+                "Never invents facts, stats or testimonials",
+                "Refunds and installments always go to you",
+                "You approve every person and message, and can take over any time",
+              ].map((r) => (
+                <li key={r} className="flex items-center gap-3 py-3.5 text-[15px]"><Check />{r}</li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="mx-auto max-w-6xl px-4 py-20 text-center">
-        <h2 className="text-3xl font-black tracking-tight sm:text-5xl">Your next cohort, sold out.</h2>
-        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600">Five minutes to set the goal. SoldOut takes it from there.</p>
-        <Link href="/intake" className="mt-8 inline-block rounded-xl bg-zinc-900 px-8 py-4 font-bold text-white hover:bg-zinc-800">
-          Start a campaign →
-        </Link>
-        <p className="mt-12 text-sm text-zinc-400">First campaign: EdAI Founder program · Powered by Claude on Naive, Mobilerun and Monid</p>
+      <section className="bg-night text-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-16">
+          <h2 className="font-display max-w-xl text-4xl leading-tight sm:text-5xl">How many seats do you need to fill?</h2>
+          <Link href="/intake" className="rounded-full bg-mustard px-7 py-4 font-bold text-night hover:brightness-95">Start a campaign →</Link>
+        </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-white/10 px-5 py-6 text-sm text-white/70">
+          <span>First customer: EdAI’s Founder Program</span>
+          <span>Built with Claude via Naive, Mobilerun, Monid and AgentMail · <Link href="/simulate" className="underline">Simulate a parent</Link></span>
+        </div>
       </section>
     </main>
   );

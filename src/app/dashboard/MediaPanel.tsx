@@ -39,40 +39,40 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-lg font-black">Videos & PDFs for parents</h3>
+        <h3 className="font-display text-xl">Videos & PDFs for parents</h3>
         <div className="flex flex-wrap gap-1">
           {[["find_videos", "Find videos"], ["make_pdf", "Make branded PDF"], ["make_video", "Make parent video"]].map(([k, label]) => (
-            <button key={k} onClick={() => askDot(k)} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-zinc-50 disabled:opacity-50">{label}</button>
+            <button key={k} onClick={() => askDot(k)} disabled={running} className="rounded border px-2 py-0.5 text-sm hover:bg-sand/50 disabled:opacity-50">{label}</button>
           ))}
         </div>
       </div>
-      <p className="mb-2 text-xs text-zinc-500">SoldOut finds the right videos in your Drive and sends them to parents when they help. Reject anything you don’t want used.</p>
+      <p className="mb-2 text-xs text-muted">SoldOut finds the right videos in your Drive and sends them to parents when they help. Reject anything you don’t want used.</p>
       {running && <p className="mb-2 text-sm text-amber-700">Searching your Drive… WhatsApp replies pause for a minute or two.</p>}
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {task?.status === "failed" && <p className="text-sm text-rose-700">The last media request didn’t finish. Try again.</p>}
       <ul className="space-y-2">
         {items.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-50 p-2 text-sm">
+          <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded bg-sand/50 p-2 text-sm">
             <div className="min-w-0">
               <a href={m.url} target="_blank" rel="noreferrer" className="font-medium underline">{m.title}</a>
-              <div className="text-xs text-zinc-500">{m.kind === "pdf" ? "PDF" : "Video"} · {m.answers} · from your Drive</div>
+              <div className="text-xs text-muted">{m.kind === "pdf" ? "PDF" : "Video"} · {m.answers} · from your Drive</div>
             </div>
             {m.status === "proposed" ? (
               <div className="flex gap-1">
-                <button onClick={() => decide(m.id, "approved")} className="rounded bg-emerald-600 px-2 py-0.5 text-white">Approve</button>
+                <button onClick={() => decide(m.id, "approved")} className="rounded bg-forest px-2 py-0.5 text-white">Approve</button>
                 <button onClick={() => decide(m.id, "rejected")} className="rounded border px-2 py-0.5">Reject</button>
               </div>
             ) : m.status === "approved" ? (
               <div className="flex items-center gap-1">
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">in use</span>
+                <span className="rounded-full bg-mint px-2 py-0.5 text-xs text-forest">in use</span>
                 <button onClick={() => decide(m.id, "rejected")} className="rounded border px-2 py-0.5 text-xs">Don’t use</button>
               </div>
             ) : (
-              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs">not used</span>
+              <span className="rounded-full bg-sand px-2 py-0.5 text-xs">not used</span>
             )}
           </li>
         ))}
-        {!items.length && !running && <li className="text-sm text-zinc-500">No videos yet.</li>}
+        {!items.length && !running && <li className="text-sm text-muted">No videos yet.</li>}
       </ul>
     </div>
   );
