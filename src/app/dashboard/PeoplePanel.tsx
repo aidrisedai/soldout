@@ -92,7 +92,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 {list.map((p) => {
                   const isOpen = open === p.id;
-                  const ladder = p.channels.email ? "Email" : p.channels.linkedin ? "LinkedIn" : "Warm intro";
+                  const ladder = p.channels.email ? "Email (sent automatically)" : p.channels.linkedin ? "LinkedIn note (you send)" : "Warm intro (through your network)";
                   return (
                     <div key={p.id} className="rounded-lg border bg-white p-3 text-sm">
                       <div className="flex items-start justify-between gap-2">
@@ -123,7 +123,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                                 }}
                                 className="rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white"
                               >
-                                Approve & send
+                                {p.channels.email ? "Approve & send" : "Approve"}
                               </button>
                             </div>
                           </div>
@@ -138,6 +138,18 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                             <button onClick={() => navigator.clipboard.writeText(p.opener ?? "")} className="underline">Copy</button>
                             {p.channels.linkedin && <a href={p.channels.linkedin} target="_blank" rel="noreferrer" className="underline">Open profile</a>}
                             <button onClick={() => act(p.id, { action: "linkedin_sent" })} className="underline">Mark sent</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {p.status === "approved" && p.touches.some((x) => x.channel === "intro" && x.status === "approved") && (
+                        <div className="mt-2 rounded bg-violet-50 p-2 text-xs">
+                          <p className="font-semibold">Warm intro: no public channel found for {p.name.split(" ")[0]}.</p>
+                          <p className="mt-1">Forward this to someone in your network who knows them:</p>
+                          <p className="mt-1 whitespace-pre-wrap rounded bg-white p-2">{`Could you introduce me to ${p.name} (${p.role ?? "community leader"})? Here's a short note you can pass along:\n\n${p.opener ?? ""}`}</p>
+                          <div className="mt-1 flex gap-2">
+                            <button onClick={() => navigator.clipboard.writeText(`Could you introduce me to ${p.name}? Here's a short note you can pass along:\n\n${p.opener ?? ""}`)} className="underline">Copy</button>
+                            <button onClick={() => act(p.id, { action: "linkedin_sent" })} className="underline">Mark intro asked</button>
                           </div>
                         </div>
                       )}

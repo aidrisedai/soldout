@@ -9,7 +9,7 @@ export async function GET() {
       const [targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount] = await Promise.all([
         db.target.count({ where: { eventId: e.id } }),
         db.target.count({ where: { eventId: e.id, decision: "go" } }),
-        db.target.count({ where: { eventId: e.id, fitScore: null } }),
+        db.target.count({ where: { eventId: e.id, fitScore: null, reason: null } }),
         db.prospect.count({ where: { eventId: e.id } }),
         db.prospect.count({ where: { eventId: e.id, status: { notIn: ["found", "done"] } } }),
         db.contact.count({ where: { eventId: e.id, referredBy: { not: null } } }),

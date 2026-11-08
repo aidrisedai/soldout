@@ -24,7 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         await organizerReply(id, body.text.trim());
         return NextResponse.json({ ok: true });
       case "linkedin_sent":
-        await db.touch.updateMany({ where: { prospectId: id, channel: "linkedin", status: "approved" }, data: { status: "sent" } });
+        await db.touch.updateMany({ where: { prospectId: id, channel: { in: ["linkedin", "intro"] }, status: "approved" }, data: { status: "sent" } });
         await db.prospect.update({ where: { id }, data: { status: "contacted" } });
         return NextResponse.json({ ok: true });
       case "skip":

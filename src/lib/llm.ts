@@ -40,6 +40,7 @@ export async function complete(params: Anthropic.MessageCreateParamsNonStreaming
   try {
     return await client.messages.create(params);
   } catch (e) {
-    throw lastErr ?? e;
+    console.error(`[llm] fallback request failed: ${(e as Error).message}`);
+    throw e;
   }
 }

@@ -83,8 +83,14 @@ Propose 4-6 targets to research.`,
     );
   }
   // Research each target (sequential keeps Monid spend and rate predictable).
-  for (const t of created) await researchTarget(event, t.id).catch((e) => console.error("[research]", t.name, (e as Error).message));
+  for (const t of created) await researchTarget(event, t.id).catch((e) => markFailed(t.id, e));
   return created.length;
+}
+
+// A failed research run must not leave the community "researching" forever.
+export async function markFailed(targetId: string, e: unknown) {
+  console.error("[research] failed:", targetId, (e as Error).message);
+  await db.target.update({ where: { id: targetId }, data: { decision: "pending", reason: "Research failed. Retry." } }).catch(() => {});
 }
 
 export async function researchTarget(event: Event, targetId: string) {

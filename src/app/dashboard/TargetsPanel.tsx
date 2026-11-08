@@ -53,7 +53,9 @@ export default function TargetsPanel({ eventId, approved }: { eventId: string; a
                   <div className="font-semibold">{t.name}</div>
                   <div className="text-xs text-zinc-500">{t.kind} · {t.policy}</div>
                 </div>
-                {done ? (
+                {!done && t.reason ? (
+                  <button onClick={async () => { await fetch(`/api/targets/${t.id}/research`, { method: "POST" }); load(); }} className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">Research failed · Retry</button>
+                ) : done ? (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${t.fitScore! >= 70 ? "bg-emerald-100 text-emerald-800" : t.fitScore! >= 45 ? "bg-amber-100 text-amber-800" : "bg-zinc-200 text-zinc-700"}`}>fit {t.fitScore}</span>
                 ) : (
                   <span className="text-xs text-zinc-400">researching…</span>
