@@ -14,7 +14,7 @@ check: Exact informal founding date, transition dates, and any more detailed per
 
 ### Mission
 
-"Raising Muslim Teens as Builders and Founders."
+"Raising Principled and Ambitious Teen Founders Guided by Islamic Principles and Values."
 
 EdAI combines AI, entrepreneurship, practical problem-solving, and Islamic values. Students work on understanding people's needs, building useful products, testing their ideas, and improving through evidence.
 
