@@ -35,6 +35,12 @@ export async function handleInbound(input: InboundInput): Promise<InboundResult>
     if (seen) return { ok: true, replies: [], actions: ["duplicate"] };
   }
 
+  // Organizer command channel: "DOT <request>" from the organizer's own number goes to Dot.
+  const organizer = process.env.ORGANIZER_PHONE ? normalizePhone(process.env.ORGANIZER_PHONE) : null;
+  if (organizer && /^dot\b/i.test(text) && phone.replace(/^wa:/, "") === organizer.replace(/^wa:/, "")) {
+    return handleOrganizerDot(phone, text.replace(/^dot\b[:,]?\s*/i, ""), channel, input.externalId);
+  }
+
   const join = parseJoin(text);
   let event: Event | null = null;
   let contact: Contact | null = null;
@@ -88,6 +94,20 @@ export async function handleInbound(input: InboundInput): Promise<InboundResult>
     console.error("[agent] failed:", message);
     return { ok: false, eventId: event.id, contactId: contact.id, replies: [], actions: [], error: message };
   }
+}
+
+async function handleOrganizerDot(phone: string, ask: string, channel: Channel, externalId?: string): Promise<InboundResult> {
+  const event = await db.event.findFirst({ orderBy: { createdAt: "desc" } });
+  if (!event || !ask) return { ok: false, replies: [], actions: [], error: "no event or empty request" };
+  // The organizer gets a contact row so messages are logged; it never counts as an opt-in.
+  const contact =
+    (await db.contact.findUnique({ where: { eventId_phone: { eventId: event.id, phone } } })) ??
+    (await db.contact.create({ data: { eventId: event.id, phone, channel, stage: "organizer" } }));
+  await db.message.create({ data: { eventId: event.id, contactId: contact.id, direction: "in", body: `DOT ${ask}`, channel, externalId } });
+  const r = await deliver(event, contact, "Asking Dot now. I'll send its answer here in a few minutes.");
+  const { askDot } = await import("./dot");
+  await askDot(event, "ask", { ask, replyTo: contact });
+  return { ok: true, eventId: event.id, contactId: contact.id, replies: [r.body], actions: ["dot_ask"], delivery: r.status };
 }
 
 async function resolveEvent(eventId: string | undefined, keyword: string | null): Promise<Event | null> {

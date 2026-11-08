@@ -1,7 +1,8 @@
 import Mobilerun from "@mobilerun/sdk";
-import type { Event } from "@prisma/client";
+import type { Contact, Event } from "@prisma/client";
 import { db } from "./db";
 import { phoneCtx } from "./waPhone";
+import { deliver } from "./inbound";
 
 // "Dot" is the organizer's ChatGPT app on the Mobilerun cloud phone, already connected
 // to their Google Drive. SoldOut gives Dot instructions through a Mobilerun Agent task
@@ -22,7 +23,7 @@ export async function deviceLocked(): Promise<boolean> {
   return !!kv && Number(kv.value) > Date.now();
 }
 
-export type DotJobKind = "find_videos" | "make_pdf" | "make_video";
+export type DotJobKind = "find_videos" | "make_pdf" | "make_video" | "ask";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -68,9 +69,11 @@ function sharing(): string {
     : `Do NOT change any sharing settings.`;
 }
 
-function dotPrompt(event: Event, kind: DotJobKind): string {
-  const reply = "Reply with one line per item in this exact format: Title | Google Drive link | the parent question it answers";
+function dotPrompt(event: Event, kind: DotJobKind, ask?: string): string {
+  const reply = "Reply with one line per item in this exact format: Title | full https://drive.google.com/... URL written out as plain text (not a clickable label) | the parent question it answers";
   switch (kind) {
+    case "ask":
+      return `${ask} (Answer briefly, under 120 words. Write any links as full URLs in plain text. ${sharing()})`;
     case "find_videos":
       return [
         `From my ${event.organization} Google Drive, find up to 5 finished, edited videos (not raw camera footage) that would help ${event.audience ?? "parents"} decide about "${event.name}".`,
@@ -93,26 +96,28 @@ function dotPrompt(event: Event, kind: DotJobKind): string {
   }
 }
 
-export async function askDot(event: Event, kind: DotJobKind): Promise<string> {
+export async function askDot(event: Event, kind: DotJobKind, opts: { ask?: string; replyTo?: Contact } = {}): Promise<string> {
   const ctx = await phoneCtx();
   if (!ctx) throw new Error("No ready Mobilerun phone");
   const job = await db.dotTask.create({ data: { eventId: event.id, kind } });
-  void runDot(ctx.mr, ctx.deviceId, event, kind, job.id).catch(async (e) => {
+  void runDot(ctx.mr, ctx.deviceId, event, kind, job.id, opts).catch(async (e) => {
+    if (opts.replyTo) await deliver(event, opts.replyTo, `Dot couldn't finish that: ${(e as Error).message}`).catch(() => {});
     await db.dotTask.update({ where: { id: job.id }, data: { status: "failed", message: (e as Error).message } });
     await unlockDevice();
   });
   return job.id;
 }
 
-async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJobKind, jobId: string) {
-  const long = kind !== "find_videos";
+async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJobKind, jobId: string, opts: { ask?: string; replyTo?: Contact } = {}) {
+  const long = kind === "make_pdf" || kind === "make_video";
+  if (opts.replyTo) await new Promise((r) => setTimeout(r, 10_000)); // let the worker send the "asking Dot" ack first
   await lockDevice((long ? 45 : 20) * 60_000);
   await new Promise((r) => setTimeout(r, 4000)); // let the WhatsApp worker finish its current step
 
   const task = [
     `Open the ChatGPT app (package com.openai.chatgpt). Start a NEW chat.`,
     `Type this message exactly and send it:`,
-    `"""${dotPrompt(event, kind)}"""`,
+    `"""${dotPrompt(event, kind, opts.ask)}"""`,
     `Wait until ChatGPT has completely finished replying (it may use Google Drive and take several minutes; if it asks to confirm a Drive action that does not change sharing, confirm it).`,
     `Then read the whole reply, scrolling if needed, and return it. Do not open any links and do not do anything else.`,
   ].join("\n");
@@ -133,15 +138,16 @@ async function runDot(mr: Mobilerun, deviceId: string, event: Event, kind: DotJo
     if (!["completed", "failed", "cancelled"].includes(st.status)) continue;
 
     const items = (st.output?.items ?? []).filter((v) => /^https?:\/\//.test(v.url));
-    for (const v of items) {
+    for (const v of kind === "ask" ? [] : items) {
       await db.mediaItem.create({
         data: { eventId: event.id, title: v.title, url: v.url, answers: v.answers, source: "dot", kind: kind === "make_pdf" ? "pdf" : "video" },
       });
     }
-    await db.dotTask.update({
-      where: { id: jobId },
-      data: { status: st.succeeded && items.length ? "done" : "failed", message: st.output?.dotReply ?? st.message ?? st.status },
-    });
+    const reply = st.output?.dotReply ?? st.message ?? st.status;
+    const ok = kind === "ask" ? !!st.succeeded && !!st.output?.dotReply : !!st.succeeded && items.length > 0;
+    await db.dotTask.update({ where: { id: jobId }, data: { status: ok ? "done" : "failed", message: reply } });
+    await unlockDevice();
+    if (opts.replyTo) await deliver(event, opts.replyTo, ok ? `Dot: ${reply}`.slice(0, 1500) : `Dot couldn't finish that (${st.status}).`);
     break;
   }
   await unlockDevice();
