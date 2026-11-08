@@ -11,7 +11,7 @@ type Prospect = {
   role: string | null;
   whyThem: string | null;
   reach: string | null;
-  channels: { email?: string; linkedin?: string; instagram?: string };
+  channels: { email?: string; linkedin?: string; instagram?: string; whatsapp?: string };
   opener: string | null;
   joinCode: string | null;
   status: string;
@@ -96,7 +96,13 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 {list.map((p) => {
                   const isOpen = open === p.id;
-                  const ladder = (p.channels as { whatsapp?: string }).whatsapp ? "WhatsApp (your contact, agreed to hear from you)" : p.channels.email ? "Email (sent automatically)" : p.channels.linkedin ? "LinkedIn note (you send)" : "Warm intro (through your network)";
+                  const ladder = [
+                    p.channels.whatsapp && "WhatsApp (your contact)",
+                    p.channels.email && "email (sent automatically)",
+                    p.channels.linkedin && "LinkedIn note (you send)",
+                    p.channels.instagram && "Instagram DM (you send)",
+                  ].filter(Boolean).join(" + ") || "Warm intro (through your network)";
+                  const ready = p.touches.filter((x) => x.status === "approved" && ["linkedin", "instagram", "intro"].includes(x.channel));
                   return (
                     <div key={p.id} className="rounded-lg border bg-paper p-3 text-sm">
                       <div className="flex items-start justify-between gap-2">
@@ -108,9 +114,10 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                       </div>
                       <p className="mt-1 text-xs text-ink/70">{p.whyThem}</p>
                       <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted">
-                        {(p.channels as { whatsapp?: string }).whatsapp && <span>💬 {(p.channels as { whatsapp?: string }).whatsapp}</span>}
+                        {p.channels.whatsapp && <span>💬 {p.channels.whatsapp}</span>}
                         {p.channels.email && <span>✉ {p.channels.email}</span>}
                         {p.channels.linkedin && <a className="underline" href={p.channels.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>}
+                        {p.channels.instagram && <a className="underline" href={p.channels.instagram} target="_blank" rel="noreferrer">Instagram</a>}
                         {p.joinCode && <span>code <b>JOIN {p.joinCode}</b>{p.broughtIn ? ` · brought ${p.broughtIn}` : ""}</span>}
                       </div>
 
@@ -119,7 +126,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                         <div className="mt-2">
                           <textarea className="w-full rounded border p-2 text-xs" rows={4} value={drafts[p.id] ?? p.opener ?? ""} onChange={(e) => setDrafts({ ...drafts, [p.id]: e.target.value })} />
                           <div className="mt-1 flex items-center justify-between">
-                            <span className="text-[11px] text-muted">First touch: {ladder}</span>
+                            <span className="text-[11px] text-muted">Reaching out on: {ladder}</span>
                             <div className="flex gap-1">
                               <button onClick={() => act(p.id, { action: "skip" })} className="rounded border px-2 py-0.5 text-xs">Skip</button>
                               <button
@@ -129,36 +136,31 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                                 }}
                                 className="rounded bg-forest px-2 py-0.5 text-xs font-semibold text-white"
                               >
-                                {p.channels.email || (p.channels as { whatsapp?: string }).whatsapp ? "Approve & send" : "Approve"}
+                                {p.channels.email || p.channels.whatsapp ? "Approve & send" : "Approve"}
                               </button>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {p.status === "approved" && p.touches.some((x) => x.channel === "linkedin" && x.status === "approved") && (
-                        <div className="mt-2 rounded bg-sky-50 p-2 text-xs">
-                          <p className="font-semibold">Send this LinkedIn connection note:</p>
-                          <p className="mt-1 whitespace-pre-wrap">{p.opener}</p>
-                          <div className="mt-1 flex gap-2">
-                            <button onClick={() => navigator.clipboard.writeText(p.opener ?? "")} className="underline">Copy</button>
-                            {p.channels.linkedin && <a href={p.channels.linkedin} target="_blank" rel="noreferrer" className="underline">Open profile</a>}
-                            <button onClick={() => act(p.id, { action: "linkedin_sent" })} className="underline">Mark sent</button>
+                      {ready.map((x) => {
+                        const intro = x.channel === "intro";
+                        const text = intro ? `Could you introduce me to ${p.name} (${p.role ?? "community leader"})? Here's a short note you can pass along:\n\n${x.body}` : x.body;
+                        const link = x.channel === "linkedin" ? p.channels.linkedin : x.channel === "instagram" ? p.channels.instagram : undefined;
+                        return (
+                          <div key={x.id} className={`mt-2 rounded p-2 text-xs ${intro ? "bg-mustard/15" : "bg-sky-50"}`}>
+                            <p className="font-semibold">
+                              {intro ? `Warm intro: no public channel found for ${p.name.split(" ")[0]}. Forward this to someone who knows them:` : x.channel === "linkedin" ? "Send this LinkedIn connection note:" : "Send this Instagram DM:"}
+                            </p>
+                            <p className="mt-1 whitespace-pre-wrap rounded bg-paper p-2">{text}</p>
+                            <div className="mt-1 flex gap-2">
+                              <button onClick={() => navigator.clipboard.writeText(text)} className="underline">Copy</button>
+                              {link && <a href={link} target="_blank" rel="noreferrer" className="underline">Open profile</a>}
+                              <button onClick={() => act(p.id, { action: "linkedin_sent", channel: x.channel })} className="underline">{intro ? "Mark intro asked" : "Mark sent"}</button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-
-                      {p.status === "approved" && p.touches.some((x) => x.channel === "intro" && x.status === "approved") && (
-                        <div className="mt-2 rounded bg-mustard/15 p-2 text-xs">
-                          <p className="font-semibold">Warm intro: no public channel found for {p.name.split(" ")[0]}.</p>
-                          <p className="mt-1">Forward this to someone in your network who knows them:</p>
-                          <p className="mt-1 whitespace-pre-wrap rounded bg-paper p-2">{`Could you introduce me to ${p.name} (${p.role ?? "community leader"})? Here's a short note you can pass along:\n\n${p.opener ?? ""}`}</p>
-                          <div className="mt-1 flex gap-2">
-                            <button onClick={() => navigator.clipboard.writeText(`Could you introduce me to ${p.name}? Here's a short note you can pass along:\n\n${p.opener ?? ""}`)} className="underline">Copy</button>
-                            <button onClick={() => act(p.id, { action: "linkedin_sent" })} className="underline">Mark intro asked</button>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })}
 
                       {!!p.touches.length && (
                         <button onClick={() => setOpen(isOpen ? null : p.id)} className="mt-2 text-xs underline">

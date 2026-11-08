@@ -5,7 +5,7 @@ import { approveAndSend, organizerReply } from "@/lib/connector";
 // Actions on a person: approve (send opener), edit opener, take over / hand back, reply personally, skip.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = (await req.json().catch(() => ({}))) as { action?: string; opener?: string; text?: string };
+  const body = (await req.json().catch(() => ({}))) as { action?: string; opener?: string; text?: string; channel?: string };
   try {
     switch (body.action) {
       case "approve":
@@ -24,8 +24,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         await organizerReply(id, body.text.trim());
         return NextResponse.json({ ok: true });
       case "linkedin_sent":
-        await db.touch.updateMany({ where: { prospectId: id, channel: { in: ["linkedin", "intro"] }, status: "approved" }, data: { status: "sent" } });
-        await db.prospect.update({ where: { id }, data: { status: "contacted" } });
+        await db.touch.updateMany({
+          where: { prospectId: id, channel: body.channel ? body.channel : { in: ["linkedin", "instagram", "intro"] }, status: "approved" },
+          data: { status: "sent" },
+        });
+        await db.prospect.updateMany({ where: { id, status: { in: ["found", "approved"] } }, data: { status: "contacted" } });
         return NextResponse.json({ ok: true });
       case "skip":
         await db.prospect.update({ where: { id }, data: { status: "done" } });

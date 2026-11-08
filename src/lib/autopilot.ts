@@ -102,6 +102,13 @@ export async function advance(eventId: string) {
       await approveAndSend(p.id).catch((e) => console.error("[autopilot] contact:", (e as Error).message));
       console.log(`[autopilot] ${event.keyword}: reached your contact ${p.name}`);
     }
+    // No email found: get their LinkedIn / Instagram notes ready for the organizer to send.
+    const noEmail = await db.prospect.findMany({ where: { eventId, status: "found", opener: { not: null } } });
+    for (const p of noEmail) {
+      const ch = JSON.parse(p.channels) as { email?: string; linkedin?: string; instagram?: string };
+      if (ch.email || !(ch.linkedin || ch.instagram)) continue;
+      await approveAndSend(p.id).catch((e) => console.error("[autopilot] notes:", (e as Error).message));
+    }
     if (!emailConfigured()) return;
     let budget = DAILY_EMAIL_CAP - (await emailsSentToday(eventId));
     if (budget <= 0) return;

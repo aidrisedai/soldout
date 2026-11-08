@@ -9,14 +9,47 @@ import { emailConfigured, markHandled, replyEmail, sendEmail, unrepliedEmails, t
 // Step 4 of docs/FLOW.md: a real conversation with a connector, not a broadcast.
 // open → listen → share progressively → ask (seat / referral / group) → hand-off with their JOIN code.
 
+type Channels = { email?: string; linkedin?: string; whatsapp?: string; instagram?: string };
+const NAMES: Record<string, string> = { whatsapp: "WhatsApp", email: "email", linkedin: "LinkedIn", instagram: "Instagram" };
+
+// "I also sent you a note on LinkedIn" style line, naming the other channels we're using.
+export function alsoLine(others: string[], where: "here" | "short" = "here"): string {
+  if (!others.length) return "";
+  const list = others.map((o) => NAMES[o] ?? o);
+  const joined = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0];
+  return where === "short"
+    ? `(Also sent you a message on ${joined}.)`
+    : `P.S. I also reached out on ${joined}, but wanted to try here too in case it's easier. Reply wherever suits you.`;
+}
+
+// LinkedIn connection notes max out at 300 characters.
+export function shortNote(text: string, suffix: string, max = 300): string {
+  const room = max - (suffix ? suffix.length + 1 : 0);
+  let t = text.trim();
+  if (t.length > room) {
+    const cut = t.slice(0, room);
+    const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "));
+    t = end > 80 ? cut.slice(0, end + 1) : `${cut.slice(0, room - 1).trimEnd()}…`;
+  }
+  return suffix ? `${t} ${suffix}` : t;
+}
+
+// Reach a person on every channel we have for them, each message pointing to the others.
+// Automatic: WhatsApp (consented contacts only) and email. Ready for the organizer to send: LinkedIn, Instagram, warm intro.
 export async function approveAndSend(prospectId: string) {
   const p = await db.prospect.findUniqueOrThrow({ where: { id: prospectId } });
-  const channels = JSON.parse(p.channels) as { email?: string; linkedin?: string; whatsapp?: string };
-  const meta = JSON.parse(p.research ?? "{}") as { subject?: string; consent?: boolean };
+  const channels = JSON.parse(p.channels) as Channels;
+  const meta = JSON.parse(p.research ?? "{}") as { subject?: string; consent?: boolean; linkedinNote?: string };
   const subject = meta.subject ?? "Hello from EdAI";
   if (!p.opener) throw new Error("The opener isn't written yet. Give it a few seconds.");
-  // Consented contacts with a phone: start the WhatsApp conversation directly (no JOIN needed).
-  if (channels.whatsapp && meta.consent) {
+
+  const wa = !!(channels.whatsapp && meta.consent); // never a cold WhatsApp
+  const email = !!(channels.email && emailConfigured());
+  const used = [wa && "whatsapp", email && "email", channels.linkedin && "linkedin", channels.instagram && "instagram"].filter(Boolean) as string[];
+  const others = (me: string) => used.filter((c) => c !== me);
+  const sent: string[] = [];
+
+  if (wa) {
     const event = await db.event.findUniqueOrThrow({ where: { id: p.eventId } });
     const phone = `wa:${channels.whatsapp}`;
     const contact =
@@ -24,23 +57,33 @@ export async function approveAndSend(prospectId: string) {
       (await db.contact.create({ data: { eventId: p.eventId, phone, channel: "whatsapp", referredBy: p.joinCode } }));
     await db.outcome.create({ data: { eventId: p.eventId, contactId: contact.id, type: "opted_in", detail: "your contact (consented)" } });
     const { deliver } = await import("./inbound");
-    await deliver(event, contact, p.opener);
+    await deliver(event, contact, p.opener); // WhatsApp goes first, so it carries no "also" line
     await db.touch.create({ data: { prospectId: p.id, channel: "whatsapp", direction: "out", body: p.opener, status: "sent" } });
-    await db.prospect.update({ where: { id: p.id }, data: { status: "contacted" } });
-    return { sent: "whatsapp" };
+    sent.push("whatsapp");
   }
-  if (channels.email && emailConfigured()) {
+  if (email) {
     // Every first email carries an easy opt-out; a "no thanks" ends the conversation for good.
-    const body = `${p.opener ?? ""}\n\nIf this isn't relevant for you, just reply "no thanks" and I won't write again.`;
-    const r = await sendEmail(channels.email, subject, body, ["soldout-outreach"]);
+    const also = alsoLine(others("email"));
+    const body = `${p.opener}${also ? `\n\n${also}` : ""}\n\nIf this isn't relevant for you, just reply "no thanks" and I won't write again.`;
+    const r = await sendEmail(channels.email!, subject, body, ["soldout-outreach"]);
     await db.touch.create({ data: { prospectId: p.id, channel: "email", direction: "out", body, status: "sent", threadId: r.threadId, externalId: r.messageId } });
-    await db.prospect.update({ where: { id: p.id }, data: { status: "contacted" } });
-    return { sent: "email" };
+    sent.push("email");
   }
-  // LinkedIn is the first rung when there is no work email: the organizer sends the connect note.
-  await db.touch.create({ data: { prospectId: p.id, channel: channels.linkedin ? "linkedin" : "intro", direction: "out", body: p.opener ?? "", status: "approved" } });
-  await db.prospect.update({ where: { id: p.id }, data: { status: "approved" } });
-  return { sent: channels.linkedin ? "linkedin_ready" : "intro_ready" };
+  // Ready-to-send notes for channels only the organizer can use.
+  for (const ch of ["linkedin", "instagram"] as const) {
+    if (!channels[ch]) continue;
+    const also = alsoLine(others(ch), "short");
+    const body = ch === "linkedin" ? shortNote(meta.linkedinNote || p.opener, also) : `${p.opener}${also ? `\n\n${also}` : ""}`;
+    await db.touch.create({ data: { prospectId: p.id, channel: ch, direction: "out", body, status: "approved" } });
+    sent.push(`${ch}_ready`);
+  }
+  if (!sent.length) {
+    await db.touch.create({ data: { prospectId: p.id, channel: "intro", direction: "out", body: p.opener, status: "approved" } });
+    sent.push("intro_ready");
+  }
+  const reached = sent.some((s) => s === "whatsapp" || s === "email");
+  await db.prospect.update({ where: { id: p.id }, data: { status: reached ? "contacted" : "approved" } });
+  return { sent: sent.join(",") };
 }
 
 const TOOLS: Anthropic.Tool[] = [

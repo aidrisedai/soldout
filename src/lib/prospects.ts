@@ -33,6 +33,8 @@ const CARD_TOOL: Anthropic.Tool = {
                 "First message in the ORGANIZER's voice (first person). Warm, personal, about them and their community; no pitch, no links, no price; ends with a light question. Under 600 characters.",
             },
             subject: { type: "string", description: "Short email subject, personal, not salesy" },
+            linkedinNote: { type: "string", description: "LinkedIn connection note in the organizer's voice, same spirit as the opener, under 220 characters" },
+            instagramHandle: { type: "string", description: "Their public professional Instagram handle, ONLY if it appears in the research or way-in text. Otherwise omit." },
           },
           required: ["name", "role", "reach", "whyThem", "opener", "subject"],
         },
@@ -64,13 +66,14 @@ export async function findPeople(event: Event, targetId: string) {
       model,
       max_tokens: 4000,
       tools: [CARD_TOOL],
-      system: `You pick the right people to reach in a community for an organizer's program, connectors first (people who run programs, schools, newsletters, youth groups, or lead the org). Use only the public information given. Skip people who look unrelated or far away. Never infer or mention religion, ethnicity, health, family or other sensitive traits about a person; refer only to their public role. Openers are written as the organizer, personal and short, with no pitch.`,
+      system: `You pick the right people to reach in a community for an organizer's program, connectors first (people who run programs, schools, newsletters, youth groups, or lead the org). Use only the public information given. Skip people who look unrelated or far away. Never infer or mention religion, ethnicity, health, family or other sensitive traits about a person; refer only to their public role. Openers are written as the organizer, personal and short, with no pitch. We reach each person on several channels (email, LinkedIn, Instagram if public), so also write a short LinkedIn note.`,
       messages: [
         {
           role: "user",
           content: `ORGANIZER: ${event.organizerName} (${event.organization}) · PROGRAM: ${event.name} · AUDIENCE: ${event.audience ?? "?"}
 COMMUNITY: ${t.name}
 RESEARCH: ${research.summary ?? ""}
+SOURCES: ${(research.sources ?? []).join(" ")}
 NEEDS: ${(research.needs ?? []).join("; ")}
 WAY IN (from public sources): ${research.howIn ?? ""}
 
@@ -91,8 +94,10 @@ Pick up to 5 people (include people named in WAY IN if they fit), connectors fir
   for (const p of picked) {
     const channels: Record<string, string> = {};
     if (p.linkedinUrl) channels.linkedin = p.linkedinUrl;
-    // Work email for connectors only (public professional address on the org's domain).
-    if (p.reach === "connector" && domain && n < 3) {
+    const ig = (p.instagramHandle ?? "").replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/.*$/, "");
+    if (ig && /^[\w.]{2,30}$/.test(ig)) channels.instagram = `https://instagram.com/${ig}`;
+    // Public work email on the org's domain, so we can reach them on email and LinkedIn both.
+    if (domain) {
       try {
         const q: Record<string, unknown> = { domain, full_name: p.name };
         if (p.linkedinHandle) q.linkedin_handle = p.linkedinHandle;
@@ -112,7 +117,7 @@ Pick up to 5 people (include people named in WAY IN if they fit), connectors fir
         whyThem: p.whyThem,
         reach: p.reach,
         channels: JSON.stringify(channels),
-        research: JSON.stringify({ subject: p.subject, source: p.linkedinUrl ?? "community research" }),
+        research: JSON.stringify({ subject: p.subject, linkedinNote: p.linkedinNote, source: p.linkedinUrl ?? "community research" }),
         opener: p.opener,
         joinCode: code,
       },
