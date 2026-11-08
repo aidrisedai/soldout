@@ -33,3 +33,4 @@ body {
   input, textarea, select { background-color: var(--color-paper); }
 }
 @keyframes shimmer { 0% { left: -35%; } 100% { left: 100%; } }
+@keyframes fadeonly { from { opacity: 0; } to { opacity: 1; } }
