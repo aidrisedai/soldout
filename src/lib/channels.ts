@@ -41,7 +41,7 @@ async function sendWhatsApp(to: string, body: string): Promise<SendResult> {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneId) return { ok: false, status: "not_sendable", error: "WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID not set" };
-  const version = process.env.WHATSAPP_API_VERSION ?? "v21.0";
+  const version = process.env.WHATSAPP_API_VERSION ?? "v23.0";
   const res = await fetch(`https://graph.facebook.com/${version}/${phoneId}/messages`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
