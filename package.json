@@ -19,13 +19,14 @@
     "@anthropic-ai/sdk": "^1.6.0",
     "@mobilerun/sdk": "^6.1.0",
     "@prisma/client": "^6.19.3",
+    "agentmail": "^0.5.53",
     "next": "15.5.29",
     "pdfkit": "^0.20.2",
+    "prisma": "^6.19.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zod": "^4.6.7",
     "tsx": "^4.23.15",
-    "prisma": "^6.19.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
