@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { draftFitQuestions, parseClipLines, parseFitLines, uniqueKeyword } from "@/lib/intake";
+import { draftStrategy } from "@/lib/strategy";
 
 export const maxDuration = 120;
 
@@ -55,5 +56,9 @@ export async function POST(req: Request) {
       clips: JSON.stringify(parseClipLines(s("clips"))),
     },
   });
+  // SoldOut takes over from the goal: start drafting the strategy right away.
+  void draftStrategy(event)
+    .then((body) => db.strategy.create({ data: { eventId: event.id, body: JSON.stringify(body) } }))
+    .catch((e) => console.error("[strategy] auto-draft failed:", (e as Error).message));
   return NextResponse.json({ id: event.id, keyword: event.keyword, fitQuestions: fit, skipped });
 }

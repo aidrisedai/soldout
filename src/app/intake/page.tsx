@@ -22,6 +22,15 @@ export default function Intake() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ id?: string; keyword?: string; error?: string; skipped?: string[]; fitQuestions?: { question: string }[] } | null>(null);
 
+  async function fillExample() {
+    const ex = (await (await fetch("/api/example")).json()) as Record<string, string>;
+    const form = document.getElementById("intake-form") as HTMLFormElement;
+    for (const [k, v] of Object.entries(ex)) {
+      const el = form.elements.namedItem(k) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (el) el.value = v;
+    }
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -38,7 +47,8 @@ export default function Intake() {
         <h1 className="text-2xl font-bold">New event</h1>
         <p className="mb-6 text-sm text-zinc-600">Each submission is its own event with its own JOIN keyword. The agent answers only from the content you give here.</p>
 
-        <form onSubmit={submit} className="space-y-6 rounded-xl bg-white p-6 shadow-sm">
+        <button type="button" onClick={fillExample} className="mb-3 rounded border bg-white px-3 py-1.5 text-sm hover:bg-zinc-50">Fill with EdAI example</button>
+        <form id="intake-form" onSubmit={submit} className="space-y-6 rounded-xl bg-white p-6 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             {FIELDS.map((f) => (
               <label key={f.name} className={`block text-sm ${f.half ? "" : "md:col-span-2"}`}>
@@ -85,7 +95,8 @@ export default function Intake() {
                   <ol className="mt-2 list-decimal pl-5">{result.fitQuestions.map((q, i) => <li key={i}>{q.question}</li>)}</ol>
                 )}
                 {!!result.skipped?.length && <p className="mt-2">Skipped (paste as text): {result.skipped.join(", ")}</p>}
-                <p className="mt-3 space-x-4"><Link className="underline" href="/dashboard">Dashboard</Link><Link className="underline" href="/simulate">Simulate</Link></p>
+                <p className="mt-2">SoldOut is drafting your strategy now (about 30 seconds).</p>
+                <p className="mt-3"><Link className="rounded bg-emerald-700 px-3 py-1.5 font-semibold text-white" href="/dashboard">Open dashboard →</Link></p>
               </>
             )}
           </div>
