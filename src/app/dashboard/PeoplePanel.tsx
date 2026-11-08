@@ -73,7 +73,7 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
   return (
     <div>
       <h3 className="font-display text-xl">People to reach</h3>
-      <p className="mb-3 text-xs text-muted">Connectors first. You approve each opener; SoldOut runs the conversation (share step by step, then ask for a seat or an introduction). Take over any time.</p>
+      <p className="mb-3 text-xs text-muted">Connectors first. On autopilot SoldOut emails openers itself (up to 10 a day) and runs each conversation: share step by step, then ask for a seat or an introduction. LinkedIn notes and warm intros are ready for you to send. Take over any conversation any time.</p>
       {error && <p className="mb-2 text-sm text-rose-700">{error}</p>}
       <div className="space-y-5">
         {targets.map((t) => {

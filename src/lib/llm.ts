@@ -24,23 +24,29 @@ export function llm(): { client: Anthropic; model: string; provider: "naive" | "
 }
 
 // Every model call goes through here: stream (avoids proxy timeouts on long outputs),
-// retry once on a dropped stream, then fall back to a plain request.
+// retry once, fall back to a plain request, then to a backup Claude model if the primary is down.
 export async function complete(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message> {
-  const { client } = llm();
+  const { client, provider } = llm();
+  const backup = process.env.AGENT_BACKUP_MODEL ?? (provider === "naive" ? "anthropic/claude-sonnet-5.5" : "claude-sonnet-5-5");
+  const models = [params.model, ...(backup && backup !== params.model ? [backup] : [])];
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (const model of models) {
+    const p = { ...params, model };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await client.messages.stream(p).finalMessage();
+      } catch (e) {
+        lastErr = e;
+        console.error(`[llm] ${model} stream attempt ${attempt + 1} failed: ${(e as Error).message}`);
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
     try {
-      return await client.messages.stream(params).finalMessage();
+      return await client.messages.create(p);
     } catch (e) {
       lastErr = e;
-      console.error(`[llm] stream attempt ${attempt + 1} failed: ${(e as Error).message}`);
-      await new Promise((r) => setTimeout(r, 1500));
+      console.error(`[llm] ${model} plain request failed: ${(e as Error).message}`);
     }
   }
-  try {
-    return await client.messages.create(params);
-  } catch (e) {
-    console.error(`[llm] fallback request failed: ${(e as Error).message}`);
-    throw e;
-  }
+  throw lastErr;
 }

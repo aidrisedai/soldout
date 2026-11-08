@@ -70,7 +70,7 @@ export default function Intake() {
       <div className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="font-display text-4xl">Start a campaign</h1>
         <p className="mt-2 text-ink/70">
-          Just the basics. SoldOut drafts your strategy the moment you submit.{" "}
+          Just the basics. SoldOut takes it from here, on its own.{" "}
           <button type="button" onClick={fillExample} className="font-semibold text-forest underline underline-offset-2">Try the EdAI example</button>
         </p>
 
@@ -154,7 +154,7 @@ export default function Intake() {
           <button disabled={busy || !!result?.id} className="w-full rounded-full bg-clay py-4 text-base font-bold text-white transition hover:bg-clay-dark disabled:opacity-60">
             {busy ? "Creating your campaign…" : "Create campaign →"}
           </button>
-          <p className="-mt-2 text-center text-xs text-muted">Nothing is sent to anyone until you approve.</p>
+          <p className="-mt-2 text-center text-xs text-muted">SoldOut runs the campaign on its own. One switch on the dashboard stops it.</p>
         </form>
       </div>
     </main>

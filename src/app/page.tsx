@@ -27,8 +27,8 @@ export default function Home() {
           </div>
           <div>
             <p className="text-lg leading-relaxed text-ink/75">
-              Set the goal. SoldOut researches the communities your families belong to, reaches the connectors in each one, and talks every
-              parent through to the enrollment link, answering only from your own content.
+              Set the goal and walk away. SoldOut plans the campaign, researches the communities your families belong to, reaches the connectors
+              in each one, and talks every parent through to the enrollment link, on its own and only from your content.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/intake" className="rounded-full bg-clay px-6 py-3.5 font-semibold text-white shadow-sm hover:bg-clay-dark">Start a campaign →</Link>
@@ -51,7 +51,7 @@ export default function Home() {
           <div className="mt-12 grid gap-10 md:grid-cols-3">
             {[
               ["01", "Set your goal", "Seats, deadline, price and the program content you already have. SoldOut drafts a strategy: what’s in the way, what to try, how to test it."],
-              ["02", "Approve the plan", "It researches each community, finds the connectors and drafts a personal message for each. Nothing goes out until you approve."],
+              ["02", "It builds and approves the plan", "SoldOut develops the strategy on its own, researches each community, decides GO or NO-GO, finds the connectors and starts the conversations."],
               ["03", "Watch seats fill", "Connectors share their JOIN code; parents get answers, videos and a PDF on WhatsApp. Refunds and installments come to you."],
             ].map(([n, t, b]) => (
               <div key={n} className="border-t-2 border-ink/15 pt-6">
@@ -91,7 +91,7 @@ export default function Home() {
                 "Answers only from your own content",
                 "Never invents facts, stats or testimonials",
                 "Refunds and installments always go to you",
-                "You approve every person and message, and can take over any time",
+                "Runs on its own, with one switch to stop everything, any time",
               ].map((r) => (
                 <li key={r} className="flex items-center gap-3 py-3.5 text-[15px]"><Check />{r}</li>
               ))}

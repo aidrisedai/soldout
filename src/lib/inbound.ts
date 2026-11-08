@@ -73,6 +73,7 @@ export async function handleInbound(input: InboundInput): Promise<InboundResult>
   });
 
   if (contact.status === "opted_out") return { ok: true, eventId: event.id, contactId: contact.id, replies: [], actions: ["ignored_opted_out"] };
+  if (!event.autopilot) return { ok: true, eventId: event.id, contactId: contact.id, replies: [], actions: ["campaign_stopped"] };
 
   if (isStop(text)) {
     await db.contact.update({ where: { id: contact.id }, data: { status: "opted_out" } });

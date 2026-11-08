@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import "@fontsource/libre-caslon-text/400.css";
-import "@fontsource/libre-caslon-text/400-italic.css";
-import "@fontsource/libre-caslon-text/700.css";
+import "@fontsource/libre-baskerville/400.css";
+import "@fontsource/libre-baskerville/400-italic.css";
+import "@fontsource/libre-baskerville/700.css";
 import "@fontsource-variable/outfit/index.css";
 import "./globals.css";
 

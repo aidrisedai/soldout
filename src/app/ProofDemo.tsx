@@ -28,7 +28,7 @@ const STEPS: { tag: string; title: string; body: React.ReactNode }[] = [
   },
   {
     tag: "Policy + test",
-    title: "Guiding policies, each with a cheap test",
+    title: "Guiding policies with tests, approved on its own",
     body: (
       <div className="space-y-2 text-sm">
         <div className="rounded-xl bg-sand/60 p-3"><p className="font-semibold">Go where products have already been built</p><p className="text-muted">Past cohorts and summit communities, through partners who were already there.</p></div>
@@ -66,10 +66,10 @@ const STEPS: { tag: string; title: string; body: React.ReactNode }[] = [
   },
   {
     tag: "Opener",
-    title: "A personal first message, in the organizer’s voice",
+    title: "A personal first message, sent on its own",
     body: (
       <div className="rounded-2xl border border-line bg-paper p-4 text-sm text-ink">
-        <p className="text-[11px] font-semibold text-muted">To: Community Organizer · LinkedIn · approved by organizer</p>
+        <p className="text-[11px] font-semibold text-muted">To: Community Organizer · sent by SoldOut on autopilot</p>
         <p className="mt-2">“Hi, I’m Azeez. I’ve admired how MAPS brings families in from across the Puget Sound region. When a youth event draws a crowd, someone is doing serious organizing behind it. I’d love to hear what’s working well for you this season. What do families respond to most when it comes to the teen events?”</p>
       </div>
     ),
@@ -99,11 +99,11 @@ const STEPS: { tag: string; title: string; body: React.ReactNode }[] = [
   },
   {
     tag: "Organizer",
-    title: "Only what needs a human comes to the organizer",
+    title: "Only refunds and installments go to the organizer",
     body: (
       <div className="space-y-2 text-sm">
         <div className="rounded-lg border border-clay/30 bg-clay/10 p-3 text-clay-dark">Flagged: “Do you offer refunds if it doesn’t work out?”</div>
-        <div className="rounded-xl bg-sand/60 p-3 text-ink/85">Organizer replies from the dashboard → the parent gets the answer in the same chat.</div>
+        <div className="rounded-xl bg-sand/60 p-3 text-ink/85">Everything else runs on its own. One switch stops the whole campaign at any time.</div>
       </div>
     ),
   },

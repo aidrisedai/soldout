@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { draftFitQuestions, parseClipLines, parseFitLines, uniqueKeyword } from "@/lib/intake";
 import { draftStrategy } from "@/lib/strategy";
 import { askDot } from "@/lib/dot";
+import { advance } from "@/lib/autopilot";
 
 export const maxDuration = 120;
 
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
   // SoldOut takes over from the goal: start drafting the strategy right away.
   void draftStrategy(event)
     .then((body) => db.strategy.create({ data: { eventId: event.id, body: JSON.stringify(body) } }))
+    .then(() => advance(event.id)) // autopilot: approve and move on without waiting for a human
     .catch((e) => console.error("[strategy] auto-draft failed:", (e as Error).message));
   // ...and build the video library from the organizer's Drive in the background.
   if (process.env.MOBILERUN_API_KEY && process.env.AUTO_MEDIA !== "0") {

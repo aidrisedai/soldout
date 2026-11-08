@@ -27,6 +27,7 @@ type EventRow = {
   deadline: string | null;
   price: string | null;
   dateText: string | null;
+  autopilot: boolean;
   score: { optIns: number; answered: number; linksSent: number; paid: number; flagsTotal: number; steppedIn: number };
   pipeline: { targetsTotal: number; targetsGo: number; targetsPending: number; prospects: number; contacted: number; referredParents: number; mediaCount: number };
   openFlags: { id: string; question: string; reason: string; createdAt: string; contact: { phone: string; channel: string } }[];
@@ -44,6 +45,15 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 
 function nextStep(e: EventRow): { text: string; tab: Tab } {
+  if (e.autopilot) {
+    if (!e.strategy) return { text: "Autopilot: drafting the strategy…", tab: "strategy" };
+    if (e.strategy.status === "draft") return { text: "Autopilot: approving the strategy and starting research…", tab: "strategy" };
+    if (!e.pipeline.targetsTotal || e.pipeline.targetsPending) return { text: "Autopilot: researching the communities your policies point to…", tab: "communities" };
+    if (!e.pipeline.targetsGo) return { text: "Autopilot: no community passed GO yet. Redraft the strategy or set one to GO.", tab: "communities" };
+    if (!e.pipeline.prospects) return { text: "Autopilot: finding the connectors in your GO communities…", tab: "people" };
+    if (e.openFlags.length) return { text: `Running on its own. ${e.openFlags.length} parent question${e.openFlags.length > 1 ? "s" : ""} only you can answer (refunds, installments).`, tab: "parents" };
+    return { text: "Running on its own: reaching connectors and talking to parents. Stop it any time.", tab: "people" };
+  }
   if (!e.strategy) return { text: "SoldOut is drafting your strategy (about 30 seconds).", tab: "strategy" };
   if (e.strategy.status === "draft") return { text: "Review the strategy and approve it. Nothing is sent before you do.", tab: "strategy" };
   if (e.openFlags.length) return { text: `${e.openFlags.length} question${e.openFlags.length > 1 ? "s" : ""} from parents need${e.openFlags.length > 1 ? "" : "s"} your answer.`, tab: "parents" };
@@ -139,6 +149,15 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className="min-w-[220px] text-right">
+                    <button
+                      disabled={busy === "ap"}
+                      onClick={() => act("ap", `/api/events/${e.id}/autopilot`, { on: !e.autopilot })}
+                      className={`mb-3 inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold ${e.autopilot ? "bg-forest text-white" : "bg-clay text-white"}`}
+                      title={e.autopilot ? "Stop: SoldOut sends nothing until you turn it back on" : "Turn autopilot back on"}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${e.autopilot ? "animate-pulse bg-mustard" : "bg-white"}`} />
+                      {e.autopilot ? "Autopilot on · Stop" : "Stopped · Resume autopilot"}
+                    </button>
                     <p className="text-3xl font-black tabular-nums">{s.paid}<span className="text-lg text-muted">/{e.goalSeats ?? "—"}</span></p>
                     <p className="text-xs text-muted">seats paid{left !== null ? ` · ${left} days left` : ""}</p>
                     <div className="mt-2 h-2 rounded-full bg-cream"><div className="h-2 rounded-full bg-gradient-to-r from-forest to-forest transition-all" style={{ width: `${pct}%` }} /></div>
@@ -232,7 +251,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       </div>
-                      {e.strategy.status === "draft" && (
+                      {e.strategy.status === "draft" && !e.autopilot && (
                         <button disabled={busy === "a"} onClick={() => act("a", `/api/strategies/${e.strategy!.id}/approve`)} className="w-full rounded-xl bg-forest py-3.5 text-lg font-bold text-white hover:bg-clay disabled:opacity-50">
                           {busy === "a" ? "Approving…" : "Approve strategy and start research →"}
                         </button>

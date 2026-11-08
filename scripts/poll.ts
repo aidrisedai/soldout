@@ -9,6 +9,7 @@ import { phoneCtx, readUnread, sendFileViaPhone, sendViaPhone } from "../src/lib
 import { resolveAttachment } from "../src/lib/files";
 import { deviceLocked } from "../src/lib/dot";
 import { processConnectorReplies } from "../src/lib/connector";
+import { advanceAll } from "../src/lib/autopilot";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 
@@ -136,6 +137,15 @@ async function connectorLoop() {
   }
 }
 
+// Autopilot: moves every running campaign forward on its own.
+async function autopilotLoop() {
+  console.log("[autopilot] running");
+  for (;;) {
+    try { await advanceAll(); } catch (e) { console.error("[autopilot]", (e as Error).message); }
+    await sleep(60000);
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const loops: Promise<unknown>[] = [];
@@ -143,5 +153,6 @@ if (process.env.TELEGRAM_BOT_TOKEN) loops.push(telegramLoop(process.env.TELEGRAM
 if (process.env.MOBILERUN_API_KEY) loops.push(mobilerunLoop(process.env.MOBILERUN_API_KEY));
 if (process.env.MOBILERUN_API_KEY && process.env.WHATSAPP_VIA !== "cloud") loops.push(whatsappPhoneLoop());
 if (process.env.AGENTMAIL_API_KEY) loops.push(connectorLoop());
+if (process.env.AUTOPILOT !== "0") loops.push(autopilotLoop());
 if (!loops.length) console.log("Nothing to poll: set TELEGRAM_BOT_TOKEN and/or MOBILERUN_API_KEY in .env");
 Promise.all(loops).catch((e) => { console.error(e); process.exit(1); });

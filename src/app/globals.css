@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* SoldOut design system: warm paper, serif headlines, terracotta / forest / mustard accents */
+/* SoldOut design system: warm paper, Libre Baskerville headlines, Outfit text, terracotta / forest / mustard accents */
 @theme {
   --color-cream: #f3eee4;
   --color-sand: #e8e1d3;
@@ -15,7 +15,7 @@
   --color-mustard: #edb72c;
   --color-night: #1c2a23;
   --font-sans: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Libre Caslon Text", Georgia, serif;
+  --font-serif: "Libre Baskerville", Georgia, serif;
 }
 
 body {

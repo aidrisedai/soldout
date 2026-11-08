@@ -14,8 +14,10 @@ export async function approveAndSend(prospectId: string) {
   const channels = JSON.parse(p.channels) as { email?: string; linkedin?: string };
   const subject = (JSON.parse(p.research ?? "{}") as { subject?: string }).subject ?? "Hello from EdAI";
   if (channels.email && emailConfigured()) {
-    const r = await sendEmail(channels.email, subject, p.opener ?? "", ["soldout-outreach"]);
-    await db.touch.create({ data: { prospectId: p.id, channel: "email", direction: "out", body: p.opener ?? "", status: "sent", threadId: r.threadId, externalId: r.messageId } });
+    // Every first email carries an easy opt-out; a "no thanks" ends the conversation for good.
+    const body = `${p.opener ?? ""}\n\nIf this isn't relevant for you, just reply "no thanks" and I won't write again.`;
+    const r = await sendEmail(channels.email, subject, body, ["soldout-outreach"]);
+    await db.touch.create({ data: { prospectId: p.id, channel: "email", direction: "out", body, status: "sent", threadId: r.threadId, externalId: r.messageId } });
     await db.prospect.update({ where: { id: p.id }, data: { status: "contacted" } });
     return { sent: "email" };
   }
@@ -130,6 +132,13 @@ export async function processConnectorReplies() {
     const p = await db.prospect.update({ where: { id: prospectId }, data: { status: "replied" } });
     await markHandled(r.messageId);
     if (p.aiPaused) { handled++; continue; } // the organizer is handling this one
+    const ev = await db.event.findUnique({ where: { id: p.eventId }, select: { autopilot: true } });
+    if (!ev?.autopilot) { handled++; continue; } // campaign stopped: read, but don't reply
+    if (/^\s*(no thanks|no thank you|not interested|unsubscribe|stop|remove me)\b/i.test(r.text)) {
+      await db.prospect.update({ where: { id: prospectId }, data: { status: "done" } });
+      handled++;
+      continue; // honored permanently, no further messages
+    }
 
     const out = await connectorReply(prospectId);
     if (out.flagged) {

@@ -38,6 +38,7 @@ export async function GET() {
         score: { optIns, answered, linksSent, paid, flagsTotal, steppedIn },
         pipeline: { targetsTotal, targetsGo, targetsPending, prospects, contacted, referredParents, mediaCount },
         dateText: e.dateText,
+        autopilot: e.autopilot,
         openFlags: flags,
         awaitingPayment: ready,
         strategy: strategy ? { id: strategy.id, status: strategy.status, body: JSON.parse(strategy.body), createdAt: strategy.createdAt, approvedAt: strategy.approvedAt } : null,
