@@ -102,7 +102,11 @@ async function whatsappPhoneLoop() {
             const f = await resolveAttachment(db, m.attachment);
             r = await sendFileViaPhone(ctx, m.contact.phone, f.path, f.fileName, m.body);
           } catch (e) {
-            r = { ok: false, error: (e as Error).message };
+            // File couldn't be fetched (e.g. Drive file not shareable): still send the text, and ask the organizer to send the file.
+            r = await sendViaPhone(ctx, m.contact.phone, m.body);
+            await db.organizerFlag.create({
+              data: { eventId: m.contact.eventId, contactId: m.contact.id, question: `File to send: ${m.attachment}`, reason: `Couldn't attach the file automatically (${(e as Error).message.slice(0, 160)}). Please send it to this parent yourself.` },
+            }).catch(() => {});
           }
         } else {
           r = await sendViaPhone(ctx, m.contact.phone, m.body);
