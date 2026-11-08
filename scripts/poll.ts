@@ -6,6 +6,7 @@
 import Mobilerun from "@mobilerun/sdk";
 import { PrismaClient } from "@prisma/client";
 import { phoneCtx, readUnread, sendViaPhone } from "../src/lib/waPhone";
+import { deviceLocked } from "../src/lib/dot";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 
@@ -70,7 +71,16 @@ async function whatsappPhoneLoop() {
   const db = new PrismaClient();
   console.log(`[whatsapp] driving WhatsApp on device ${ctx.deviceId}`);
   const seen = new Set<string>();
+  let paused = false;
   for (;;) {
+    if (await deviceLocked()) {
+      if (!paused) console.log("[whatsapp] paused: Dot is using the phone");
+      paused = true;
+      await sleep(5000);
+      continue;
+    }
+    if (paused) console.log("[whatsapp] resumed");
+    paused = false;
     try {
       const queued = await db.message.findMany({
         where: { channel: "whatsapp", direction: "out", status: "queued" },

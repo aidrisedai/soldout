@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import MediaPanel from "./MediaPanel";
 
 type Strategy = {
   id: string;
@@ -193,6 +194,7 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
+                <MediaPanel eventId={e.id} />
               </section>
             );
           })}

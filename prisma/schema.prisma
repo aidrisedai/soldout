@@ -135,3 +135,26 @@ model KV {
   key   String @id
   value String
 }
+
+// Videos/clips found by Dot (ChatGPT on the Mobilerun phone) or cut by Naive Clips.
+// The agent only sends media the organizer approved.
+model MediaItem {
+  id        String   @id @default(cuid())
+  eventId   String
+  title     String
+  url       String
+  answers   String // which parent question it answers
+  source    String // dot | naive_clip | organizer
+  status    String   @default("proposed") // proposed | approved | rejected
+  createdAt DateTime @default(now())
+}
+
+model DotTask {
+  id        String   @id @default(cuid())
+  eventId   String
+  taskId    String? // Mobilerun task id
+  status    String   @default("running") // running | done | failed
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
