@@ -1,7 +1,7 @@
 import { AgentMailClient } from "agentmail";
 
 // Outreach email through AgentMail (https://docs.agentmail.to): sends from the organizer's
-// AgentMail inbox and reads replies by the "unreplied" label (no public webhook needed).
+// AgentMail inbox and reads replies by the "received" + "unread" labels (no public webhook needed).
 let client: AgentMailClient | null = null;
 function am(): AgentMailClient {
   if (!process.env.AGENTMAIL_API_KEY) throw new Error("AGENTMAIL_API_KEY not set");
@@ -25,15 +25,17 @@ export async function sendEmail(to: string, subject: string, text: string, label
 
 export async function replyEmail(messageId: string, text: string) {
   const r = await am().inboxes.messages.reply(inbox(), messageId, { text });
-  await am().inboxes.messages.update(inbox(), messageId, { addLabels: ["replied"], removeLabels: ["unreplied"] }).catch(() => {});
+  await am().inboxes.messages.update(inbox(), messageId, { addLabels: ["soldout-replied"], removeLabels: ["unread"] }).catch(() => {});
   return { messageId: r.messageId, threadId: r.threadId };
 }
 
-// New inbound replies: newest message text only (quoted history stripped by AgentMail).
-export async function unrepliedEmails(limit = 10) {
-  const list = await am().inboxes.messages.list(inbox(), { labels: ["unreplied"], limit });
+// New inbound mail: newest message text only (quoted history stripped by AgentMail).
+// Pass threadIds to keep only replies in conversations SoldOut started.
+export async function unrepliedEmails(limit = 20, threadIds?: Set<string>) {
+  const list = await am().inboxes.messages.list(inbox(), { labels: ["received", "unread"], limit });
   const out: { messageId: string; threadId: string; from: string; subject?: string; text: string }[] = [];
   for (const m of list.messages ?? []) {
+    if (threadIds && !threadIds.has(m.threadId)) continue;
     const full = await am().inboxes.messages.get(inbox(), m.messageId);
     out.push({ messageId: m.messageId, threadId: m.threadId, from: String(m.from), subject: m.subject, text: (full.extractedText ?? full.text ?? m.preview ?? "").trim() });
   }
@@ -41,5 +43,5 @@ export async function unrepliedEmails(limit = 10) {
 }
 
 export async function markHandled(messageId: string) {
-  await am().inboxes.messages.update(inbox(), messageId, { addLabels: ["soldout-seen"], removeLabels: ["unreplied"] }).catch(() => {});
+  await am().inboxes.messages.update(inbox(), messageId, { addLabels: ["soldout-seen"], removeLabels: ["unread"] }).catch(() => {});
 }
