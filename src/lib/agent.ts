@@ -246,7 +246,7 @@ export async function runAgent(event: Event, contact: Contact, inboundText: stri
 
   let text = "";
   for (let i = 0; i < 6; i++) {
-    const res = await client.messages.create({ model, max_tokens: 1024, system, tools: TOOLS, messages });
+    const res = await client.messages.stream({ model, max_tokens: 1024, system, tools: TOOLS, messages }).finalMessage();
     const textParts = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text);
     if (textParts.length) text = textParts.join("\n").trim();
     const uses = res.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");

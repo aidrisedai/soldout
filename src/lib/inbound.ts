@@ -106,7 +106,7 @@ async function findContact(phone: string, eventId?: string): Promise<Contact | n
   return db.contact.findFirst({ where: { phone }, orderBy: { updatedAt: "desc" } });
 }
 
-async function deliver(event: Event, contact: Contact, body: string) {
+export async function deliver(event: Event, contact: Contact, body: string) {
   const msg = await db.message.create({
     data: { eventId: event.id, contactId: contact.id, direction: "out", body, channel: contact.channel, status: contact.channel === "simulate" ? "ok" : "queued" },
   });
