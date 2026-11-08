@@ -93,7 +93,7 @@ async function whatsappPhoneLoop() {
         where: { channel: "whatsapp", direction: "out", status: "queued" },
         orderBy: { createdAt: "asc" },
         take: 5,
-        include: { contact: { select: { phone: true } } },
+        include: { contact: { select: { phone: true, id: true, eventId: true } } },
       });
       for (const m of queued) {
         let r: { ok: boolean; error?: string };
