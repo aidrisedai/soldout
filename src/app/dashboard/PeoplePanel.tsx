@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Working from "@/components/Working";
 
 type Touch = { id: string; channel: string; direction: string; body: string; status: string; author: string; createdAt: string };
 type Prospect = {
@@ -89,6 +90,9 @@ export default function PeoplePanel({ eventId }: { eventId: string }) {
                   </button>
                 )}
               </div>
+              {busy && !list.length && (
+                <Working compact steps={[`Searching LinkedIn for people at ${t.name}…`, "Ranking who has the biggest reach…", "Looking up public work emails…", "Writing a personal opener for each person…"]} interval={7000} />
+              )}
               <div className="grid gap-3 md:grid-cols-2">
                 {list.map((p) => {
                   const isOpen = open === p.id;

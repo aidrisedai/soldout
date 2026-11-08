@@ -71,14 +71,16 @@ export async function advance(eventId: string) {
     const goTargets = targets.filter((t) => t.decision === "go").sort((a, b) => (b.fitScore ?? 0) - (a.fitScore ?? 0));
     for (const t of goTargets) {
       const has = await db.prospect.count({ where: { targetId: t.id } });
-      const busy = (await db.kV.findUnique({ where: { key: `people:${t.id}` } }))?.value === "1";
-      if (has || busy) continue;
+      const state = (await db.kV.findUnique({ where: { key: `people:${t.id}` } }))?.value;
+      if (has || state === "1" || state === "done") continue; // searched already (even if nobody was found)
       await db.kV.upsert({ where: { key: `people:${t.id}` }, create: { key: `people:${t.id}`, value: "1" }, update: { value: "1" } });
       try {
         const n = await findPeople(event, t.id);
         console.log(`[autopilot] ${event.keyword}: found ${n} people in ${t.name}`);
-      } finally {
-        await db.kV.update({ where: { key: `people:${t.id}` }, data: { value: "0" } });
+        await db.kV.update({ where: { key: `people:${t.id}` }, data: { value: "done" } });
+      } catch (e) {
+        await db.kV.update({ where: { key: `people:${t.id}` }, data: { value: "0" } }); // retry next tick
+        throw e;
       }
       return;
     }

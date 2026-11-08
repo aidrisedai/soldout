@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Working from "@/components/Working";
 
 type Research = { summary?: string; needs?: string[]; fit?: string; howIn?: string; sources?: string[]; location?: string };
 type Target = { id: string; name: string; kind: string; policy: string; fitScore: number | null; decision: string; reason: string | null; research: Research | null };
@@ -41,7 +42,7 @@ export default function TargetsPanel({ eventId, approved }: { eventId: string; a
         )}
       </div>
       <p className="mb-3 text-xs text-muted">From your guiding policies. SoldOut researches each community’s needs and recommends GO or NO-GO; you decide.</p>
-      {researching && <p className="mb-3 text-sm text-amber-700">Researching communities… (about a minute each)</p>}
+      {researching && !targets.length && <Working title="Finding the communities your policies point to" steps={["Reading your guiding policies…", "Matching them to real communities and organizations…", "Queuing each one for research…"]} />}
       <div className="grid gap-3 md:grid-cols-2">
         {targets.map((t) => {
           const r = t.research ?? {};
@@ -58,9 +59,12 @@ export default function TargetsPanel({ eventId, approved }: { eventId: string; a
                 ) : done ? (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${t.fitScore! >= 70 ? "bg-mint text-forest" : t.fitScore! >= 45 ? "bg-amber-100 text-amber-800" : "bg-sand text-ink/80"}`}>fit {t.fitScore}</span>
                 ) : (
-                  <span className="text-xs text-muted">researching…</span>
+                  <span className="text-xs font-semibold text-clay">researching</span>
                 )}
               </div>
+              {!done && !t.reason && (
+                <Working compact steps={[`Searching the web for ${t.name}…`, "Reading their pages and programs…", "Checking how they reach families…", "Scoring fit and deciding GO or NO-GO…"]} interval={9000} />
+              )}
               {done && (
                 <>
                   <p className="mt-2 text-ink/80">{r.summary}</p>

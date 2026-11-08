@@ -32,3 +32,4 @@ body {
   *, ::before, ::after { border-color: var(--color-line); }
   input, textarea, select { background-color: var(--color-paper); }
 }
+@keyframes shimmer { 0% { left: -35%; } 100% { left: 100%; } }

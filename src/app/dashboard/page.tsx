@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import MediaPanel from "./MediaPanel";
 import TargetsPanel from "./TargetsPanel";
 import PeoplePanel from "./PeoplePanel";
+import ActivityPanel from "./ActivityPanel";
+import Working from "@/components/Working";
 
 type Strategy = {
   id: string;
@@ -63,6 +65,19 @@ function nextStep(e: EventRow): { text: string; tab: Tab } {
   if (!e.pipeline.contacted) return { text: "Approve the first openers to start conversations.", tab: "people" };
   if (e.awaitingPayment.length) return { text: `${e.awaitingPayment.length} famil${e.awaitingPayment.length > 1 ? "ies have" : "y has"} the enrollment link. Mark paid when they enroll.`, tab: "parents" };
   return { text: "Conversations are running. SoldOut will flag anything that needs you.", tab: "people" };
+}
+
+const STRATEGY_STEPS = ["Reading your program content…", "Finding what’s really in the way…", "Writing 2–3 guiding policies…", "Designing a cheap test for each…", "Choosing who to reach first…"];
+
+function rightNow(e: EventRow): { title: string; steps: string[] } | null {
+  if (!e.autopilot) return null;
+  if (!e.strategy) return { title: "Drafting your strategy", steps: STRATEGY_STEPS };
+  if (e.strategy.status === "draft") return { title: "Approving the strategy", steps: ["Checking the plan against your goal…", "Approving it and starting research…"] };
+  if (!e.pipeline.targetsTotal || e.pipeline.targetsPending)
+    return { title: `Researching communities${e.pipeline.targetsTotal ? ` (${e.pipeline.targetsTotal - e.pipeline.targetsPending}/${e.pipeline.targetsTotal} done)` : ""}`, steps: ["Turning each policy into real communities…", "Searching the web for each one…", "Reading their pages, programs and contacts…", "Scoring fit and deciding GO or NO-GO…"] };
+  if (e.pipeline.targetsGo && e.pipeline.prospects === 0) return { title: "Finding connectors", steps: ["Searching LinkedIn inside each GO community…", "Looking up public work emails…", "Writing a personal opener for each person…"] };
+  if (e.pipeline.prospects > e.pipeline.contacted) return { title: "Reaching out", steps: ["Emailing openers to connectors (up to 10 a day)…", "Preparing LinkedIn notes and warm intros…", "Watching for replies…"] };
+  return null;
 }
 
 function daysLeft(deadline: string | null) {
@@ -179,6 +194,7 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
+                <ActivityPanel eventId={e.id} now={rightNow(e)} />
                 <button onClick={() => setTab(next.tab)} className="mt-4 flex w-full items-center justify-between rounded-xl border border-forest/30 bg-mint/50 px-4 py-3 text-left text-sm hover:bg-mint">
                   <span><b className="text-forest">Next:</b> {next.text}</span>
                   <span className="text-forest">→</span>
@@ -200,11 +216,12 @@ export default function Dashboard() {
               <section className="mt-4 rounded-2xl bg-paper p-6 shadow-sm">
                 {tab === "strategy" && (
                   !e.strategy ? (
-                    <div className="py-10 text-center">
-                      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-forest/30 border-t-forest" />
-                      <p className="mt-3 font-semibold">Drafting your strategy…</p>
-                      <p className="text-sm text-muted">Diagnosis, guiding policies with tests, and who to reach first.</p>
-                      <button disabled={busy === "s"} onClick={() => act("s", `/api/events/${e.id}/strategy`)} className="mt-4 text-xs underline">Taking long? Draft again</button>
+                    <div className="mx-auto max-w-lg py-6">
+                      <Working title="Drafting your strategy (about 30 seconds)" steps={STRATEGY_STEPS} interval={6000} />
+                      <div className="mt-6 space-y-3">
+                        {[0, 1, 2].map((k) => <div key={k} className="h-16 animate-pulse rounded-xl bg-sand/70" style={{ animationDelay: `${k * 0.2}s` }} />)}
+                      </div>
+                      <button disabled={busy === "s"} onClick={() => act("s", `/api/events/${e.id}/strategy`)} className="mt-4 text-xs text-muted underline">Taking long? Draft again</button>
                     </div>
                   ) : (
                     <div className="space-y-6">
@@ -214,7 +231,7 @@ export default function Dashboard() {
                           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${e.strategy.status === "approved" ? "bg-mint text-forest" : "bg-amber-100 text-amber-800"}`}>
                             {e.strategy.status === "approved" ? "Approved" : "Draft, waiting for you"}
                           </span>
-                          <button disabled={busy === "s"} onClick={() => act("s", `/api/events/${e.id}/strategy`)} className="rounded-lg border px-2.5 py-1 text-xs hover:bg-sand/50 disabled:opacity-50">{busy === "s" ? "Redrafting…" : "Redraft"}</button>
+                          <button disabled={busy === "s"} onClick={() => act("s", `/api/events/${e.id}/strategy`)} className="rounded-lg border px-2.5 py-1 text-xs hover:bg-sand/50 disabled:opacity-50">{busy === "s" ? "Redrafting (about 30s)…" : "Redraft"}</button>
                         </div>
                       </div>
                       <div className="rounded-xl bg-night p-5 text-white">

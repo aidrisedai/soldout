@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Working from "@/components/Working";
 
 type Item = { id: string; title: string; url: string; answers: string; source: string; kind: string; status: string };
 type Task = { status: string; kind: string; message: string | null; createdAt: string } | null;
@@ -47,7 +48,7 @@ export default function MediaPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
       <p className="mb-2 text-xs text-muted">SoldOut finds the right videos in your Drive and sends them to parents when they help. Reject anything you don’t want used.</p>
-      {running && <p className="mb-2 text-sm text-amber-700">Searching your Drive… WhatsApp replies pause for a minute or two.</p>}
+      {running && <Working compact title="Working in your Drive (1–3 minutes)" steps={["Opening your Drive assistant on the cloud phone…", "Looking through your finished videos and brand files…", "Picking what helps parents decide…", "Reading back the results…"]} interval={20000} />}
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {task?.status === "failed" && <p className="text-sm text-rose-700">The last media request didn’t finish. Try again.</p>}
       <ul className="space-y-2">

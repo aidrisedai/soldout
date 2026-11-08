@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/Nav";
 import { useState } from "react";
+import Working from "@/components/Working";
 
 const input =
   "mt-1.5 w-full rounded-xl border border-line bg-paper px-3.5 py-3 text-[15px] text-ink placeholder:text-muted outline-none transition focus:border-forest focus:ring-4 focus:ring-mint";
@@ -55,11 +56,25 @@ export default function Intake() {
     const j = await r.json();
     setResult(j);
     setBusy(false);
-    if (j.id) setTimeout(() => (window.location.href = "/dashboard"), 1500);
+    if (j.id) setTimeout(() => (window.location.href = "/dashboard"), 7000);
   }
 
+  const takingOver = busy || !!result?.id;
   return (
     <main className="min-h-screen bg-cream">
+      {takingOver && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-cream/95 p-6 backdrop-blur">
+          <div className="w-full max-w-md rounded-3xl border border-line bg-paper p-8 shadow-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-clay">Autopilot</p>
+            <h2 className="font-display mt-2 text-3xl">SoldOut is taking over.</h2>
+            {result?.keyword && <p className="mt-2 text-sm text-muted">Families will text <b className="text-ink">JOIN {result.keyword}</b></p>}
+            <Working
+              steps={["Saving your goal and content…", "Reading your program content…", "Drafting fit questions for parents…", "Starting the strategy: what’s in the way, what to try…", "Opening your campaign dashboard…"]}
+              interval={1500}
+            />
+          </div>
+        </div>
+      )}
       <header className="border-b border-line bg-cream">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <Logo />

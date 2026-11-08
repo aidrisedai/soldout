@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Typing } from "@/components/Working";
 import { Logo } from "@/components/Nav";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -148,7 +149,7 @@ export default function Simulate() {
                   </div>
                 </div>
               ))}
-              {busy && <div className="text-xs text-muted">typing…</div>}
+              {busy && <div className="flex justify-start"><Typing /></div>}
               {!contact && !busy && <p className="pt-24 text-center text-sm text-muted">Text “JOIN {ev?.keyword}” to start.</p>}
               <div ref={bottom} />
             </div>
